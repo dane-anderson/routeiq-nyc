@@ -10,9 +10,13 @@ An AI-powered decision engine that compares subway vs taxi in NYC using structur
 https://routeiq-nyc.onrender.com/
 
 ---
+## 📸 App Preview
 
-## 🎬 Demo  
-RouteIQ Demo *(add later if you want)*
+Sample output from the RouteIQ decision system.
+
+The app analyzes transit options in real time, compares ETA, cost, and traffic conditions, and uses an AI reasoning layer to explain the optimal decision.
+
+![RouteIQ NYC Screenshot](./routeiq-nyc.jpeg)
 
 ---
 
