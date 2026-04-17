@@ -12,7 +12,7 @@ https://routeiq-nyc.onrender.com/
 ---
 ## 🎬 Demo
 
-![RouteIQ Demo](routeiq-demo.gif)
+![RouteIQ Demo](routeiq-nyc.gif)
 ---
 
 ## 🧠 What It Does  
