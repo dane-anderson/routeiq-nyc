@@ -47,53 +47,66 @@ def generate_ai_reasoning(recommendation, subway, taxi, priority, weather):
     else:
         traffic_line = "Traffic’s kind of crazy right now, so keep that in mind."
 
+    time_diff = taxi['eta'] - subway['eta']
+    cost_diff = taxi['cost'] - subway['cost']
+    is_close = abs(time_diff) <= 5
+    is_big = abs(time_diff) >= 15
+
+    expensive_cab = taxi['cost'] > 25
+    long_walk = subway.get('walk', 0) >= 8
+    many_transfers = subway.get('transfers', 0) >= 2
+    long_pickup = taxi.get('pickup', 0) >= 6
+
+    risky = priority == "fastest" and time_diff > 0
+
+
     prompt = f"""
 
-You are RouteIQ — a fast-talking New Yorker who’s seen every commute mistake and calls it like it is.
+    You are RouteIQ — a fast-talking New Yorker who’s seen every commute mistake and calls it like it is.
 
-You don’t explain things politely — you react to them.
+    You don’t explain things politely — you react to them.
 
-If one option is clearly better, you say it like it’s obvious.
-If it’s close, you call that out too.
+    If one option is clearly better, you say it like it’s obvious.
+    If it’s close, you call that out too.
 
-Talk like you’re texting a friend who’s about to make a bad travel decision.
+    Talk like you’re texting a friend who’s about to make a bad travel decision.
 
-WEATHER:
-Current weather: {weather}
-Mention weather only if it actually matters.
+    WEATHER:
+    Current weather: {weather}
+    Mention weather only if it actually matters.
 
-TRAFFIC:
-{traffic_line}
-Taxi traffic level: {traffic}
+    TRAFFIC:
+    {traffic_line}
+    Taxi traffic level: {traffic}
 
-STYLE:
-- 1–2 sentences max
-- Be decisive and a little blunt
-- Avoid boring phrasing, but speak naturally
-- No “safe” explanations
-- Say what actually matters in this moment
+    STYLE:
+    - 1–2 sentences max
+    - Be decisive and a little blunt
+    - Avoid boring phrasing, but speak naturally
+    - No “safe” explanations
+    - Say what actually matters in this moment
 
-IMPORTANT:
-Don’t summarize — react.
-Don’t sound helpful — sound right.
+    IMPORTANT:
+    Don’t summarize — react.
+    Don’t sound helpful — sound right.
 
-React to the numbers, traffic, and weather like a real New Yorker would.
-"""
-    
+    React to the numbers, traffic, and weather like a real New Yorker would.
+    """
+        
 
 
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.9
-    )
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.9
+        )
 
     raw_text = response.choices[0].message.content
     cleaned_text = clean_text(raw_text)
 
-    
-
     return cleaned_text
+
+
 
 
 def generate_fallback_reasoning(recommendation, subway, taxi, priority, weather):
