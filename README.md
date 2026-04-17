@@ -7,7 +7,7 @@ An AI-powered decision engine that compares subway vs taxi in NYC using structur
 ---
 
 ## 🚀 Live App  
-👉 *(your Render link here once live)*
+https://routeiq-nyc.onrender.com/
 
 ---
 
@@ -106,7 +106,7 @@ Git + GitHub
 
 This app is fully deployed on Render and accessible here:
 
-👉 *(your link here)*  
+👉 https://routeiq-nyc.onrender.com/
 
 Key deployment features:
 
