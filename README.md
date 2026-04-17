@@ -2,7 +2,7 @@
 
 Built with Python, Streamlit, and OpenAI — deployed live on Render.
 
-An AI-powered decision engine that tells you whether to take the subway or a taxi in NYC — based on time, cost, traffic, and your priorities.
+An AI-powered decision engine that compares subway vs taxi in NYC using structured route logic, confidence scoring, and a dynamic reasoning layer.
 
 ---
 
