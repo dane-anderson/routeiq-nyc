@@ -26,9 +26,14 @@ def looks_broken(text):
 
 def generate_reasoning(recommendation, subway, taxi, priority, weather):
     try:
-        return generate_ai_reasoning(recommendation, subway, taxi, priority, weather)
+        ai_text = generate_ai_reasoning(recommendation, subway, taxi, priority, weather)
+        if ai_text:
+            return ai_text
     except Exception:
-        return generate_fallback_reasoning(recommendation, subway, taxi, priority, weather)
+        pass
+
+    fallback_text = generate_fallback_reasoning(recommendation, subway, taxi, priority, weather)
+    return fallback_text if fallback_text else "Take the recommended option based on time, cost, and conditions."
 
 
 def generate_ai_reasoning(recommendation, subway, taxi, priority, weather):
