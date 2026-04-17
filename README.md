@@ -12,11 +12,7 @@ https://routeiq-nyc.onrender.com/
 ---
 ## 📸 App Preview
 
-Sample output from the RouteIQ decision system.
-
-The app analyzes transit options in real time, compares ETA, cost, and traffic conditions, and uses an AI reasoning layer to explain the optimal decision.
-
-![RouteIQ NYC Screenshot](./routeiq-nyc.jpeg)
+![RouteIQ NYC Screenshot](./routeiq-nyc.png)
 
 ---
 
