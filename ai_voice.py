@@ -14,6 +14,15 @@ def clean_text(text):
     text = re.sub(r"\s+", " ", text)
     return text.strip()
 
+def looks_broken(text):
+    if re.search(r"\d+[a-zA-Z]+", text):
+        return True
+    if re.search(r"[a-zA-Z]{15,}", text):
+        return True
+    if "andwill" in text or "minutesfor" in text:
+        return True
+    return False
+
 
 def generate_reasoning(recommendation, subway, taxi, priority, weather):
     try:
@@ -86,7 +95,12 @@ Write a natural explanation for the recommendation.
     )
 
     raw_text = response.choices[0].message.content
-    return clean_text(raw_text)
+    cleaned_text = clean_text(raw_text)
+
+    if looks_broken(cleaned_text):
+        raise ValueError("Broken AI output")
+
+        return cleaned_text
 
 
 def generate_fallback_reasoning(recommendation, subway, taxi, priority, weather):
