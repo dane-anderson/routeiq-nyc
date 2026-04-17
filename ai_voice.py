@@ -19,8 +19,7 @@ def looks_broken(text):
         return True
     if re.search(r"[a-zA-Z]{15,}", text):
         return True
-    if "andwill" in text or "minutesfor" in text:
-        return True
+    
     return False
 
 
