@@ -1,7 +1,14 @@
 import random
+import re
 from openai import OpenAI
 
 client = OpenAI()
+
+def clean_text(text):
+    text = re.sub(r"(\d)([a-zA-Z])", r"\1 \2", text)
+    text = text.replace("*", "").replace("_", "")
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
 
 
 def generate_reasoning(recommendation, subway, taxi, priority, weather):
@@ -68,7 +75,8 @@ Write a natural explanation for the recommendation.
         messages=[{"role": "user", "content": prompt}],
     )
 
-    return response.choices[0].message.content.strip()
+    raw_text = response.choices[0].message.content
+    return clean_text(raw_text)
 
 
 def generate_fallback_reasoning(recommendation, subway, taxi, priority, weather):
