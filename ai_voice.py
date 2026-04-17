@@ -5,8 +5,12 @@ from openai import OpenAI
 client = OpenAI()
 
 def clean_text(text):
+    text = re.sub(r"([a-zA-Z])(\d)", r"\1 \2", text)
     text = re.sub(r"(\d)([a-zA-Z])", r"\1 \2", text)
-    text = text.replace("*", "").replace("_", "")
+    text = re.sub(r"([.,!$—’])([a-zA-Z])", r"\1 \2", text)
+    text = text.replace("—", " — ")
+    text = text.replace("’", "'")
+    text = text.replace("**", "").replace("_", "")
     text = re.sub(r"\s+", " ", text)
     return text.strip()
 
@@ -31,6 +35,7 @@ def generate_ai_reasoning(recommendation, subway, taxi, priority, weather):
         traffic_line = "Traffic’s kind of crazy right now, so keep that in mind."
 
     prompt = f"""
+
 You are a sharp, slightly witty New Yorker giving quick travel advice.
 
 Rules:
@@ -41,6 +46,11 @@ Rules:
 - Do not drop or shorten prices
 - Do not write plain numbers for money
 - Do not invent or change ETA or price values
+- Use normal spacing between all words and numbers
+- Never combine words together
+- Leave a normal space after punctuation
+- Write clean, readable sentences only
+- Do not use markdown, italics, or special formatting
 
 Tone:
 - confident
