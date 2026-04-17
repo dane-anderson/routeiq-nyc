@@ -10,10 +10,9 @@ An AI-powered decision engine that compares subway vs taxi in NYC using structur
 https://routeiq-nyc.onrender.com/
 
 ---
-## 📸 App Preview
+## 🎬 Demo
 
-![RouteIQ NYC Screenshot](./routeiq-nyc.png)
-
+![RouteIQ Demo](routeiq-demo.gif)
 ---
 
 ## 🧠 What It Does  
