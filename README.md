@@ -43,10 +43,10 @@ RouteIQ now uses real-world routing data instead of simulated inputs.
 
 New capabilities:
 
-📍 Users can enter real addresses (e.g. “Times Square, NYC” → “Wall Street, NYC”)
-🗺 Addresses are converted to coordinates using the Google Geocoding API
-🚗 Driving ETA is pulled live from the Google Routes API
-🚇 Transit ETA is pulled live from the Google Routes API
+- 📍 Users can enter real addresses (e.g. “Times Square, NYC” → “Wall Street, NYC”)
+- 🗺 Addresses are converted to coordinates using the Google Geocoding API
+- 🚗 Driving ETA is pulled live from the Google Routes API
+- 🚇 Transit ETA is pulled live from the Google Routes API
 
 This transforms RouteIQ from a simulated model into a real-time decision engine.
 ---
