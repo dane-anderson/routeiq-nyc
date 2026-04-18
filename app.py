@@ -1,50 +1,44 @@
+
 import streamlit as st
-from data_simulator import get_subway_option, get_taxi_option
 from decision_engine import make_decision
 from ai_voice import generate_reasoning
-
+from routes_api import get_drive_eta, get_transit_eta, geocode_address
 
 st.set_page_config(page_title="RouteIQ-NYC", page_icon="🚕", layout="wide")
 
 st.markdown("""
 <style>
-/* Background */
 body {
     background-color: #FFFFFF;
 }
 
-/* Title */
 h1 {
     color: #111111;
     font-weight: 800;
 }
 
-/* Subtitle */
 h2, h3 {
     color: #333333;
 }
 
-/* Buttons */
 .stButton > button {
     background-color: #FFC72C;
     color: black;
     font-weight: 600;
     border-radius: 8px;
     padding: 0.6em 1.2em;
+    border: none;
 }
 
-/* Input boxes */
-.stTextInput input, .stNumberInput input {
+.stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] > div {
     border-radius: 8px;
 }
 
-/* Page spacing */
 .block-container {
     padding-top: 2rem;
     padding-bottom: 2rem;
 }
 
-/* Premium cards */
 .decision-card {
     background: linear-gradient(135deg, #111111 0%, #1f1f1f 100%);
     color: white;
@@ -111,8 +105,8 @@ col1, col2 = st.columns([1, 1.2])
 with col1:
     st.markdown("### Plan Your Trip")
 
-    origin = st.text_input("Origin", placeholder="Upper East Side")
-    destination = st.text_input("Destination", placeholder="SoHo")
+    origin_input = st.text_input("Enter starting address", "Times Square, NYC")
+    destination_input = st.text_input("Enter destination", "Wall Street, NYC")
 
     arrival_deadline = st.number_input(
         "Must arrive within how many minutes?",
@@ -126,50 +120,73 @@ with col1:
 
 with col2:
     if run:
-        subway = get_subway_option(origin, destination)
-        taxi = get_taxi_option(origin, destination)
+        origin = geocode_address(origin_input)
+        destination = geocode_address(destination_input)
+
+        if not origin or not destination:
+            st.error("Could not find one of the locations.")
+            st.stop()
+
+        with st.spinner("Analyzing routes..."):
+            taxi_eta = get_drive_eta(origin, destination)
+            subway_eta = get_transit_eta(origin, destination)
+
+        taxi_eta_min = round(taxi_eta / 60)
+        subway_eta_min = round(subway_eta / 60)
+
+        taxi = {
+            "eta": taxi_eta_min,
+            "cost": 25,
+            "pickup_time": 2,
+            "drive_time": max(0, taxi_eta_min - 2),
+            "traffic_level": "Moderate"
+        }
+
+        subway = {
+            "eta": subway_eta_min,
+            "cost": 3,
+            "walk_to_station": 7,
+            "wait_time": 3,
+            "ride_time": max(0, subway_eta_min - 10),
+            "transfers": 0
+        }
 
         result = make_decision(subway, taxi, arrival_deadline, priority)
 
         weather = "clear"
+        why = generate_reasoning(result, subway, taxi, priority, weather)
 
-        reasoning = generate_reasoning(
-            result["recommendation"],
-            subway,
-            taxi,
-            priority,
-            weather
-        )
+        recommendation = result["recommendation"]
 
-        if result["recommendation"] == "subway":
+        if recommendation == "subway":
             decision_icon = "🚇"
             decision_text = "Take the Subway"
-            bg_color = "#111111"
-            text_color = "white"
+            card_bg = "#111111"
+            card_text = "white"
         else:
             decision_icon = "🚕"
             decision_text = "Take the Taxi"
-            bg_color = "#FFC72C"
-            text_color = "black"
+            card_bg = "#FFC72C"
+            card_text = "black"
 
         st.markdown(
             f"""
             <div style="
-                background-color: {bg_color};
-                color: {text_color};
+                background-color: {card_bg};
+                color: {card_text};
                 padding: 20px;
                 border-radius: 14px;
                 text-align: center;
                 font-size: 26px;
-                font-weight: 600;
+                font-weight: 700;
                 margin-bottom: 15px;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.12);
             ">
                 {decision_icon} {decision_text}
             </div>
             """,
             unsafe_allow_html=True
         )
-
         st.markdown("### Trip Comparison")
 
         compare_col1, compare_col2 = st.columns(2)
@@ -192,8 +209,11 @@ with col2:
             st.write(f"Traffic: {taxi['traffic_level']}")
 
         st.markdown("### Why")
-        st.info(reasoning)
+        st.info(why)
 
         st.markdown("### Confidence")
-        st.write(result["confidence"].title())
+        st.write(result["confidence"])
         st.write(f"Buffer: {result['buffer']} minutes")
+                
+
+        
