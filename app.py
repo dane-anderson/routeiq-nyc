@@ -129,7 +129,8 @@ with col2:
 
         with st.spinner("Analyzing routes..."):
             taxi_eta = get_drive_eta(origin, destination)
-            subway_eta = get_transit_eta(origin, destination)
+            subway_data = get_transit_eta(origin, destination)
+            subway_eta = round(subway_data["eta_seconds"] / 60)
 
         taxi_eta_min = round(taxi_eta / 60)
         subway_eta_min = round(subway_eta / 60)
@@ -143,12 +144,12 @@ with col2:
         }
 
         subway = {
-            "eta": subway_eta_min,
+            "eta": subway_eta,
             "cost": 3,
-            "walk_to_station": 7,
-            "wait_time": 3,
-            "ride_time": max(0, subway_eta_min - 10),
-            "transfers": 0
+            "walk_to_station": subway_data["walk_minutes"],
+            "wait_time": 0,
+            "ride_time": subway_data["ride_minutes"],
+            "transfers": subway_data["transfers"]
         }
 
         result = make_decision(subway, taxi, arrival_deadline, priority)

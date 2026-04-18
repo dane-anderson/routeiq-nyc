@@ -13,7 +13,7 @@ URL = "https://routes.googleapis.com/directions/v2:computeRoutes"
 HEADERS = {
     "Content-Type": "application/json",
     "X-Goog-Api-Key": API_KEY,
-    "X-Goog-FieldMask": "routes.duration"
+    "X-Goog-FieldMask": "routes.duration,routes.legs.steps,routes.legs.steps.travelMode,routes.legs.steps.staticDuration,routes.legs.steps.transitDetails"
 }
 
 def geocode_address(address):
@@ -79,7 +79,37 @@ def get_transit_eta(origin, destination):
 
     durations = [int(r["duration"].replace("s", "")) for r in result["routes"]]
     seconds = min(durations)
-    return seconds
+
+    best_route = min(
+    result["routes"],
+    key=lambda r: int(r["duration"].replace("s", ""))
+    )
+
+    steps = best_route["legs"][0]["steps"]
+    walk_seconds = 0
+    transit_steps = 0
+
+    for step in steps:
+        mode = step.get("travelMode")
+        
+    if mode == "WALK":
+        walk_seconds += int(step["staticDuration"].replace("s", ""))
+    elif mode == "TRANSIT":
+        ride_seconds += int(step["staticDuration"].replace("s", ""))
+        transit_steps += 1
+
+    ride_seconds = seconds - walk_seconds
+    delay_status = "On time"
+
+   
+    return {
+        "eta_seconds": seconds,
+        "walk_minutes": round(walk_seconds / 60),
+        "ride_minutes": round(ride_seconds / 60),
+        "transfers": max(transit_steps - 1, 0),
+        "delay_status": delay_status,
+        "best_route": best_route
+    }
 
 if __name__ == "__main__":
     origin = {"latitude": 40.7580, "longitude": -73.9855}
