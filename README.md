@@ -25,17 +25,20 @@ RouteIQ is a Streamlit app powered by a decision engine and AI reasoning layer t
 
 ---
 
-## 🧠 Overview  
+🧠 Overview
 
 RouteIQ is a decision-based AI application that combines structured logic with LLM-powered explanations.
 
 Instead of relying only on AI, the system:
 
-- Uses live routing data (Google Geocoding + Routes APIs)- Applies deterministic decision logic  
-- Calculates arrival confidence using buffer time  
-- Uses AI to translate decisions into natural, human-readable explanations  
+- Uses live routing data (Google Geocoding + Routes APIs)
+- Applies deterministic decision logic
+- Calculates arrival confidence using buffer time
+- Uses AI to translate decisions into natural, human-readable explanations
 
-This project demonstrates an **agent-style architecture**, where logic and AI work together to produce reliable, explainable outcomes.
+This project demonstrates an agent-style architecture, where logic and AI work together to produce reliable, explainable outcomes.
+
+---
 
 🆕 Live Data Upgrade (Latest)
 
@@ -59,16 +62,12 @@ Compare routes based on:
 - Cost  
 - Transfers, walking, and wait time  
 
----
-
 ### 🧠 Decision Engine  
 - Chooses best option based on:
   - fastest  
   - cheapest  
   - balanced  
 - Uses weighted scoring for realistic tradeoffs  
-
----
 
 ### ⏱ Confidence + Buffer System  
 - Calculates how early (or late) you’ll arrive  
@@ -77,8 +76,6 @@ Compare routes based on:
   - You should get there on time  
   - It’s a close call  
   - Risky — you might be late  
-
----
 
 🚦 Traffic Awareness (In Progress)
   -  Driving ETA reflects live routing data.
