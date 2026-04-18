@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
+print("API KEY LOADED:", API_KEY)
 
 URL = "https://routes.googleapis.com/directions/v2:computeRoutes"
 
