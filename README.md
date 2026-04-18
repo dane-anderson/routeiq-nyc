@@ -52,6 +52,7 @@ New capabilities:
 - 🚇 Transit ETA is pulled live from the Google Routes API
 
 This transforms RouteIQ from a simulated model into a real-time decision engine.
+
 ---
 
 ## ✨ Features  
@@ -80,8 +81,6 @@ Compare routes based on:
 🚦 Traffic Awareness (In Progress)
   -  Driving ETA reflects live routing data.
   -  Traffic labeling is currently estimated and will be upgraded to live traffic signals.
-
----
 
 ### 💬 AI Reasoning Layer  
 - Explains decisions in natural language  
