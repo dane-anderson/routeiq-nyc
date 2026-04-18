@@ -18,8 +18,7 @@ https://routeiq-nyc.onrender.com/
 
 RouteIQ is a Streamlit app powered by a decision engine and AI reasoning layer that helps users:
 
-🚇 Compare subway vs taxi routes in real time  
-🚕 Evaluate time, cost, and traffic conditions  
+🚇 Compare subway vs car routes using live routing data (Google APIs)🚕 Evaluate time, cost, and traffic conditions  
 🧠 Receive a clear recommendation based on priorities  
 💬 Understand the decision through AI-generated reasoning  
 ⏱ See confidence based on arrival buffer (how early you’ll arrive)  
@@ -32,13 +31,24 @@ RouteIQ is a decision-based AI application that combines structured logic with L
 
 Instead of relying only on AI, the system:
 
-- Simulates travel options (subway vs taxi)  
-- Applies deterministic decision logic  
+- Uses live routing data (Google Geocoding + Routes APIs)- Applies deterministic decision logic  
 - Calculates arrival confidence using buffer time  
 - Uses AI to translate decisions into natural, human-readable explanations  
 
 This project demonstrates an **agent-style architecture**, where logic and AI work together to produce reliable, explainable outcomes.
 
+🆕 Live Data Upgrade (Latest)
+
+RouteIQ now uses real-world routing data instead of simulated inputs.
+
+New capabilities:
+
+📍 Users can enter real addresses (e.g. “Times Square, NYC” → “Wall Street, NYC”)
+🗺 Addresses are converted to coordinates using the Google Geocoding API
+🚗 Driving ETA is pulled live from the Google Routes API
+🚇 Transit ETA is pulled live from the Google Routes API
+
+This transforms RouteIQ from a simulated model into a real-time decision engine.
 ---
 
 ## ✨ Features  
@@ -70,13 +80,9 @@ Compare routes based on:
 
 ---
 
-### 🚦 Traffic Awareness  
-- Converts raw traffic data into human-readable levels:
-  - Light  
-  - Normal  
-  - Heavy  
-  - Crazy  
-- Used in both UI and AI reasoning  
+🚦 Traffic Awareness (In Progress)
+  -  Driving ETA reflects live routing data.
+  -  Traffic labeling is currently estimated and will be upgraded to live traffic signals.
 
 ---
 
@@ -141,16 +147,30 @@ streamlit run app.py
 
 ---
 
+⚠️ Current Limitations
+
+While core routing is now live, some breakdown fields are still estimated:
+
+- Walk time to station
+- Wait time
+- Ride time split
+- Transfers
+- Traffic level label
+- Taxi pickup time
+
+These will be upgraded to fully live data in upcoming iterations.
+
 ## 💡 Vision  
 
 This project represents the foundation of a real-time AI travel assistant.
 
 The goal is to evolve RouteIQ from a simulated decision engine into a **live, intelligent system** by integrating:
 
-- real-time transit APIs  
-- live traffic data  
-- weather conditions  
-- rideshare pricing  
+  - live transit breakdown (station, line, transfers)
+  - MTA real-time service data (delays, alerts)
+  - live traffic classification
+  - live weather integration
+  - rideshare pickup + pricing (Uber/Lyft APIs)
 
 Ultimately, RouteIQ moves toward:
 
