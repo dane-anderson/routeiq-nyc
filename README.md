@@ -20,18 +20,19 @@ Built with Python, Streamlit, Google Maps APIs, and OpenAI — deployed live on 
 
 <img src="routeiq-nyc.gif" width="800"/>---
 ---
-
-## 🧠 What It Does
-
-RouteIQ helps users decide **how to get somewhere in NYC — and when to leave**.
+🧠 What It Does
+RouteIQ helps users decide how to get somewhere in NYC — and when to leave.
 
 It compares subway vs taxi using real routing data, then:
 
-- 🚇 Calculates subway travel time
-- 🚕 Calculates taxi ETA using live routing data
-- 🧠 Applies a decision engine based on user priorities
-- 💬 Explains the decision using AI in a NYC-style voice
-- ⏱ Shows confidence and **leave timing**
+🚇 Calculates subway travel time (including multi-train routes)
+🚕 Calculates taxi ETA using live routing data
+🧠 Applies a decision engine based on user priorities
+💬 Explains the decision using AI in a NYC-style voice
+⏱ Shows confidence and leave timing
+🪧 Visually displays subway routes using real MTA-style signage
+
+RouteIQ now handles **multi-leg subway routes**, including transfers between trains, and presents them in a clean, visual format.
 
 ## ⚡ Why This Is Different
 
@@ -80,38 +81,46 @@ Produces:
 - Uses a consistent NYC-style voice
 
 ---
+✨ Features
+🚇 Subway vs Taxi Comparison
+ETA comparison using live routing data
+Cost comparison
+Walk / ride / transfer breakdown
+Supports multi-train routes with transfers
 
-## ✨ Features
+🪧 MTA-Style Route Visualization (NEW)
+Displays subway routes using realistic NYC subway signage
+Stacks multiple train legs vertically (e.g., E → C transfers)
+Shows:
+train line (color + symbol)
+direction / destination
+clean, readable route flow
 
-### 🚇 Subway vs Taxi Comparison
-- ETA comparison using live routing data
-- Cost comparison
-- Walk / ride / transfer breakdown
+🧠 Decision Engine
+Weighted scoring system
+Priority-based outcomes:
+fastest
+cheapest
+balanced
 
-### 🧠 Decision Engine
-- Weighted scoring system
-- Priority-based outcomes:
-  - fastest
-  - cheapest
-  - balanced
+⏱ Confidence + Leave Timing
+Calculates arrival buffer
+Converts that into:
+“You’ll get there comfortably”
+“It’s a close call”
+“Risky — you might be late”
+Shows:
+Leave in X minutes
 
-### ⏱ Confidence + Leave Timing
-- Calculates arrival buffer
-- Converts that into:
-  - “You’ll get there comfortably”
-  - “It’s a close call”
-  - “Risky — you might be late”
-- Shows:
-  - **Leave in X minutes**
+💬 AI Explanation Layer
+Explains why the decision is correct
+Context-aware based on weather and traffic
+Conversational NYC tone
 
-### 💬 AI Explanation Layer
-- Explains *why* the decision is correct
-- Context-aware based on weather and traffic
-- Conversational NYC tone
+🌧 Weather Awareness
+Adjusts reasoning based on conditions like rain
+Impacts comfort and recommendation logic
 
-### 🌧 Weather Awareness
-- Adjusts reasoning based on conditions like rain
-- Impacts comfort and recommendation logic
 
 ---
 
@@ -124,29 +133,33 @@ RouteIQ now uses **real-world routing data** instead of simulated travel times.
 - 🚗 Pull live driving ETA
 - 🚇 Pull live transit ETA
 
-This moves the project from simulation to a **real-time decision system**.
+This moves the project from simulation to a real-time decision system.
+
+Now includes **multi-leg transit parsing**, enabling realistic subway routing with transfers.
+
+---
+⚠️ Current Limitations
+Some breakdown fields are still estimated or simplified:
+
+wait time
+exact transfer timing
+detailed ride segmentation
+traffic level labeling
+taxi pickup time
+
+Transit routing depends on Google Routes API and may occasionally:
+- favor longer walks over transfers
+- miss optimal multi-line combinations
 
 ---
 
-## ⚠️ Current Limitations
-
-Some breakdown fields are still estimated:
-
-- wait time
-- detailed ride split
-- transfer details
-- traffic level labeling
-- taxi pickup time
-
----
-
-## 🔜 Next Up
-
-- 📍 Show subway station + train line
-- 🚦 Add real MTA delay and alert context
-- 🚗 Improve traffic classification
-- 🌦 Expand weather integration
-- 🚕 Add Uber/Lyft pricing and pickup estimates
+🔜 Next Up
+📍 Show transfer stations explicitly (e.g., “Transfer at 42 St-Port Authority”)
+🚦 Add real MTA delay and alert context
+🚗 Improve traffic classification
+🌦 Expand weather integration
+🚕 Add Uber/Lyft pricing and pickup estimates
+🧠 Enhance decision engine with risk tolerance and time sensitivity
 
 ---
 
