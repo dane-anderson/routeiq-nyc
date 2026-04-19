@@ -51,25 +51,26 @@ This project demonstrates:
 
 ## 🧠 System Overview
 
-RouteIQ combines **deterministic logic + AI reasoning**.
+RouteIQ combines deterministic logic + AI reasoning.
 
 ### 1. Data Layer
 - Google Geocoding API → convert addresses into coordinates
 - Google Routes API → fetch real-time ETAs for driving and transit
 
 ### 2. Decision Engine
-- Evaluates:
-  - time
-  - cost
-  - priority (`fastest`, `cheapest`, `balanced`)
-- Produces:
-  - recommendation
-  - arrival buffer
-  - confidence level
-  - leave timing
+Evaluates:
+- time
+- cost
+- priority (`fastest`, `cheapest`, `balanced`)
+
+Produces:
+- recommendation
+- arrival buffer
+- confidence level
+- leave timing
 
 ### 3. AI Reasoning Layer
-- Translates the decision into natural language
+- OpenAI API → turns structured trip decisions into natural-language explanations
 - Adapts to:
   - weather
   - traffic
