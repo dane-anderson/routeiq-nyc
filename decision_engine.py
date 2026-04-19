@@ -6,7 +6,7 @@ def make_decision(subway, taxi, arrival_deadline, priority, weather):
         recommendation = "subway" if subway["cost"] < taxi["cost"] else "taxi"
 
     else:  
-        walk_penalty = subway["walk_to_station"] * 0.7
+        walk_penalty = subway["walk_to_station"] * 3
         if weather == "rain":
             walk_penalty += subway["walk_to_station"] * 2
 
