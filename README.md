@@ -82,46 +82,45 @@ Produces:
 
 ---
 ✨ Features
-🚇 Subway vs Taxi Comparison
-ETA comparison using live routing data
-Cost comparison
-Walk / ride / transfer breakdown
-Supports multi-train routes with transfers
 
-🪧 MTA-Style Route Visualization (NEW)
-Displays subway routes using realistic NYC subway signage
-Stacks multiple train legs vertically (e.g., E → C transfers)
-Shows:
-train line (color + symbol)
-direction / destination
-clean, readable route flow
+🚇 **Subway vs Taxi Comparison**
+- ETA comparison using live routing data  
+- Cost comparison  
+- Walk / ride / transfer breakdown  
+- Supports multi-train routes with transfers  
 
-🧠 Decision Engine
-Weighted scoring system
-Priority-based outcomes:
-fastest
-cheapest
-balanced
+🪧 **MTA-Style Route Visualization (NEW)**
+- Displays subway routes using realistic NYC subway signage  
+- Stacks multiple train legs vertically (e.g., E → C transfers)  
+- Shows:
+  - train line (color + symbol)  
+  - direction / destination  
+  - clean, readable route flow  
 
-⏱ Confidence + Leave Timing
-Calculates arrival buffer
-Converts that into:
-“You’ll get there comfortably”
-“It’s a close call”
-“Risky — you might be late”
-Shows:
-Leave in X minutes
+🧠 **Decision Engine**
+- Weighted scoring system  
+- Priority-based outcomes:
+  - fastest  
+  - cheapest  
+  - balanced  
 
-💬 AI Explanation Layer
-Explains why the decision is correct
-Context-aware based on weather and traffic
-Conversational NYC tone
+⏱ **Confidence + Leave Timing**
+- Calculates arrival buffer  
+- Converts that into:
+  - “You’ll get there comfortably”  
+  - “It’s a close call”  
+  - “Risky — you might be late”  
+- Shows:
+  - Leave in X minutes  
 
-🌧 Weather Awareness
-Adjusts reasoning based on conditions like rain
-Impacts comfort and recommendation logic
+💬 **AI Explanation Layer**
+- Explains why the decision is correct  
+- Context-aware based on weather and traffic  
+- Conversational NYC tone  
 
-
+🌧 **Weather Awareness**
+- Adjusts reasoning based on conditions like rain  
+- Impacts comfort and recommendation logic  
 ---
 
 ## 🆕 Live Data Upgrade
@@ -154,12 +153,21 @@ Transit routing depends on Google Routes API and may occasionally:
 ---
 
 🔜 Next Up
-📍 Show transfer stations explicitly (e.g., “Transfer at 42 St-Port Authority”)
-🚦 Add real MTA delay and alert context
-🚗 Improve traffic classification
-🌦 Expand weather integration
-🚕 Add Uber/Lyft pricing and pickup estimates
-🧠 Enhance decision engine with risk tolerance and time sensitivity
+
+📍 **Show transfer stations explicitly**
+- e.g., “Transfer at 42 St–Port Authority”
+
+🚦 **Add real MTA delay and alert context**
+
+🚗 **Improve traffic classification**
+
+🌦 **Expand weather integration**
+
+🚕 **Add Uber/Lyft pricing and pickup estimates**
+
+🧠 **Enhance decision engine**
+- add risk tolerance  
+- add time sensitivity  
 
 ---
 
