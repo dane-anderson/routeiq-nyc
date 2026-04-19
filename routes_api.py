@@ -1,7 +1,7 @@
 import requests
 import os
 from dotenv import load_dotenv
-from google.transit import gtfs_realtime_pb2
+
 
 load_dotenv()
 API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
