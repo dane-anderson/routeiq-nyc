@@ -158,10 +158,11 @@ with col2:
             "transfers": subway_data["transfers"],
             "delay_status": subway_data["delay_status"]   
         }
+        weather = "clear"
 
-        weather = "rain"
         result = make_decision(subway, taxi, arrival_deadline, priority, weather)
         why = generate_reasoning(result, subway, taxi, priority, weather)
+
         
 
         recommendation = result["recommendation"]
@@ -263,7 +264,8 @@ with col2:
 
         st.markdown("### Confidence")
         st.write(result["confidence"])
-        st.write(f"Buffer: {result['buffer']} minutes")
+        buffer_display = max(result["buffer"], 0)
+        st.write(f"Buffer: {buffer_display} minutes")
 
         
                 
