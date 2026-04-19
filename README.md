@@ -87,7 +87,16 @@ Produces:
 - ETA comparison using live routing data  
 - Cost comparison  
 - Walk / ride / transfer breakdown  
-- Supports multi-train routes with transfers  
+- Supports multi-train routes with transfers
+
+  📱 Smart Link Previews (NEW)
+Custom iMessage / social link previews
+
+When shared, RouteIQ displays a clean, product-style preview card
+instead of a raw URL
+
+Try it:
+https://routeiq-landing.onrender.com
 
 🪧 **MTA-Style Route Visualization (NEW)**
 - Displays subway routes using realistic NYC subway signage  
@@ -122,12 +131,7 @@ Produces:
 - Adjusts reasoning based on conditions like rain  
 - Impacts comfort and recommendation logic
 
-  📱 Smart Link Previews (NEW)
-RouteIQ includes custom link previews (iMessage, social platforms)
 
-When shared, the app displays a clean, product-style preview card
-instead of a raw URL — improving first impressions and usability
-https://routeiq-landing.onrender.com
 ---
 
 ## 🆕 Live Data Upgrade
