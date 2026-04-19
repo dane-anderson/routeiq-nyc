@@ -37,6 +37,7 @@ def generate_reasoning(recommendation, subway, taxi, priority, weather):
 
 def generate_ai_reasoning(recommendation, subway, taxi, priority, weather):
     traffic = taxi.get("traffic_level", "Normal")
+    decision = recommendation
 
     if traffic == "Light":
         traffic_line = "Traffic’s light right now, so the roads are moving."
@@ -71,6 +72,8 @@ def generate_ai_reasoning(recommendation, subway, taxi, priority, weather):
 
     Talk like you’re texting a friend who’s about to make a bad travel decision.
 
+    Decision: {decision}
+    
     WEATHER:
     Current weather: {weather}
     Mention weather only if it actually matters.

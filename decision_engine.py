@@ -1,4 +1,4 @@
-def make_decision(subway, taxi, arrival_deadline, priority):
+def make_decision(subway, taxi, arrival_deadline, priority, weather):
     if priority == "fastest":
         recommendation = "subway" if subway["eta"] < taxi["eta"] else "taxi"
 
@@ -12,6 +12,7 @@ def make_decision(subway, taxi, arrival_deadline, priority):
 
     chosen_eta = subway["eta"] if recommendation == "subway" else taxi["eta"]
     buffer = arrival_deadline - chosen_eta
+    leave_in = max(buffer, 0)
 
     if buffer >= 10:
         confidence = "You’ll get there comfortably"
@@ -22,8 +23,28 @@ def make_decision(subway, taxi, arrival_deadline, priority):
     else:
         confidence = "Risky — you might be late"
 
+
+    if subway["delay_status"] == "Severe delays":
+        explanation = "Subway delays are severe right now. Expect major disruptions — taking a taxi may save you time."
+
+    elif subway["delay_status"] == "Minor delays":
+        explanation = "There are some subway delays, but it's still a solid option depending on traffic."
+
+    else:
+        if weather == "rain":
+            explanation = "Subway is running smoothly and it's raining — avoid getting soaked and take the train."
+        elif weather == "snow":
+            explanation = "Subway is running smoothly and snow can slow traffic — train is the safer bet."
+        else:
+            explanation = "Subway service is running smoothly. It's the fastest and most reliable option right now."
+
     return {
         "recommendation": recommendation,
         "confidence": confidence,
-        "buffer": buffer
+        "buffer": buffer,
+        "explanation": explanation,  
+        "leave_in": leave_in
+        
     }
+
+    

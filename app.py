@@ -2,7 +2,7 @@
 import streamlit as st
 from decision_engine import make_decision
 from ai_voice import generate_reasoning
-from routes_api import get_drive_eta, get_transit_eta, geocode_address
+from routes_api import get_drive_eta, get_transit_eta, geocode_address, get_weather
 
 st.set_page_config(page_title="RouteIQ-NYC", page_icon="🚕", layout="wide")
 
@@ -131,6 +131,12 @@ with col2:
             taxi_eta = get_drive_eta(origin, destination)
             subway_data = get_transit_eta(origin, destination)
             subway_eta = round(subway_data["eta_seconds"] / 60)
+            delay_status = subway_data["delay_status"]
+
+        if delay_status == "Severe delays":
+            subway_eta += 10
+        elif delay_status == "Minor delays":
+            subway_eta += 5
 
         taxi_eta_min = round(taxi_eta / 60)
         subway_eta_min = round(subway_eta / 60)
@@ -149,13 +155,14 @@ with col2:
             "walk_to_station": subway_data["walk_minutes"],
             "wait_time": 0,
             "ride_time": subway_data["ride_minutes"],
-            "transfers": subway_data["transfers"]
+            "transfers": subway_data["transfers"],
+            "delay_status": subway_data["delay_status"]   
         }
 
-        result = make_decision(subway, taxi, arrival_deadline, priority)
-
-        weather = "clear"
+        weather = "rain"
+        result = make_decision(subway, taxi, arrival_deadline, priority, weather)
         why = generate_reasoning(result, subway, taxi, priority, weather)
+        
 
         recommendation = result["recommendation"]
 
@@ -200,6 +207,48 @@ with col2:
             st.write(f"Wait: {subway['wait_time']} min")
             st.write(f"Ride: {subway['ride_time']} min")
             st.write(f"Transfers: {subway['transfers']}")
+            st.write(f"Status: {subway_data['delay_status']}")
+
+            if result["leave_in"] > 0:
+                if result["recommendation"] == "subway":
+                    label = "🚇 Leave in"
+                else:
+                    label = "🚕 Leave in"
+
+                st.markdown(
+                    f"""
+                    <div style="
+                        display: inline-block;
+                        background-color: #d4edda;
+                        color: #155724;
+                        padding: 8px 14px;
+                        border-radius: 10px;
+                        font-weight: 600;
+                        margin-top: 10px;
+                    ">
+                        {label} {result['leave_in']} minutes
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+            else:
+                st.markdown(
+                    """
+                    <div style="
+                        display: inline-block;
+                        background-color: #f8d7da;
+                        color: #721c24;
+                        padding: 8px 14px;
+                        border-radius: 10px;
+                        font-weight: 600;
+                        margin-top: 10px;
+                    ">
+                        🚨 Leave NOW
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+         
 
         with compare_col2:
             st.markdown("#### 🚕 Taxi")
@@ -215,6 +264,8 @@ with col2:
         st.markdown("### Confidence")
         st.write(result["confidence"])
         st.write(f"Buffer: {result['buffer']} minutes")
+
+        
                 
 
         
