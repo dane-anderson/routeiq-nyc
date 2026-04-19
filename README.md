@@ -3,9 +3,11 @@
 
 
 # 🚕 RouteIQ-NYC  
-**AI-powered NYC travel decision engine — subway vs taxi in real time**
+> 🚇🚕 **Take the right route — and know exactly when to leave.**
 
-Built with Python, Streamlit, and OpenAI. Deployed live on Render.
+**RouteIQ is a real-time NYC decision engine that chooses between subway and taxi using live data, structured logic, and AI reasoning.**
+
+Built with Python, Streamlit, Google Maps APIs, and OpenAI — deployed live on Render.
 
 ---
 
