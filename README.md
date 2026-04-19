@@ -31,6 +31,22 @@ It compares subway vs taxi using real routing data, then:
 - 💬 Explains the decision using AI in a NYC-style voice
 - ⏱ Shows confidence and **leave timing**
 
+## ⚡ Why This Is Different
+
+Most navigation apps tell you how to get somewhere.
+
+RouteIQ tells you:
+
+- 👉 **What decision to make** (subway vs taxi)
+- 👉 **Why it’s the right choice** (AI reasoning layer)
+- 👉 **When to leave** (real-time timing intelligence)
+
+Instead of just routing, RouteIQ acts as a **decision engine** — combining live data, structured logic, and AI to guide real-world actions.
+
+This project demonstrates:
+- building systems, not just interfaces
+- combining deterministic logic with LLM reasoning
+- designing AI that supports decisions instead of replacing them
 ---
 
 ## 🧠 System Overview
