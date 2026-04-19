@@ -120,7 +120,14 @@ Produces:
 
 🌧 **Weather Awareness**
 - Adjusts reasoning based on conditions like rain  
-- Impacts comfort and recommendation logic  
+- Impacts comfort and recommendation logic
+
+  📱 Smart Link Previews (NEW)
+RouteIQ includes custom link previews (iMessage, social platforms)
+
+When shared, the app displays a clean, product-style preview card
+instead of a raw URL — improving first impressions and usability
+https://routeiq-landing.onrender.com
 ---
 
 ## 🆕 Live Data Upgrade
