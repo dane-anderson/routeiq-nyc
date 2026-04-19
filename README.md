@@ -89,7 +89,7 @@ Produces:
 - Walk / ride / transfer breakdown  
 - Supports multi-train routes with transfers
 
-  📱 Smart Link Previews (NEW)
+**📱 Smart Link Previews (NEW)**
 Custom iMessage / social link previews
 
 When shared, RouteIQ displays a clean, product-style preview card
