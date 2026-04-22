@@ -11,8 +11,9 @@ Built with Python, Streamlit, Google Maps APIs, OpenAI, and live MTA data — de
 👉 https://routeiq-nyc.onrender.com/
 
 ---
+# 📸 Preview
 
-# 🎬 Demo
+![RouteIQ Preview](routeiqpreview.png)
 ---
 
 # 🧠 What It Does
