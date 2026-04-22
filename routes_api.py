@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 import requests
 from dotenv import load_dotenv
+import xml.etree.ElementTree as ET
 
 load_dotenv()
 
@@ -16,6 +17,7 @@ HEADERS = {
     "X-Goog-Api-Key": API_KEY,
     "X-Goog-FieldMask": (
         "routes.duration,"
+        "routes.polyline.encodedPolyline,"
         "routes.legs.steps,"
         "routes.legs.steps.travelMode,"
         "routes.legs.steps.staticDuration,"
@@ -24,8 +26,82 @@ HEADERS = {
 }
 
 
-def get_mta_status() -> str:
-    return "MTA unavailable"
+def _normalize_line_symbols(line_symbol: str) -> list[str]:
+    raw = (line_symbol or "").strip().upper()
+    if not raw:
+        return []
+
+    pieces = [part.strip() for part in raw.replace(",", "/").split("/")]
+    return [part for part in pieces if part]
+
+
+
+def _map_mta_status(status_text: str, detail_text: str = "") -> str:
+    status = (status_text or "").strip().upper()
+    details = (detail_text or "").strip().upper()
+    combined = f"{status} {details}".strip()
+
+    severe_keywords = [
+        "DELAYS",
+        "SUSPENDED",
+        "NO SERVICE",
+        "PART SUSPENDED",
+        "SIGNAL PROBLEMS",
+        "SERVICE SUSPENDED",
+    ]
+    minor_keywords = [
+        "PLANNED WORK",
+        "SERVICE CHANGE",
+        "SLOW",
+        "REDUCED SERVICE",
+    ]
+
+    if any(keyword in combined for keyword in severe_keywords):
+        return "Severe delays"
+    if any(keyword in combined for keyword in minor_keywords):
+        return "Minor delays"
+    return "On time"
+
+
+
+def get_mta_status(line_symbol: str = "") -> str:
+    try:
+        line_symbols = _normalize_line_symbols(line_symbol)
+        url = "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2FserviceStatus"
+
+        response = requests.get(url, timeout=8)
+        if response.status_code != 200:
+            return "On time"
+
+        root = ET.fromstring(response.text)
+
+        # If we know the subway line(s), try to match the exact line status first.
+        if line_symbols:
+            for line_node in root.findall(".//subway/line"):
+                name_text = (line_node.findtext("name") or "").strip().upper()
+                status_text = (line_node.findtext("status") or "").strip()
+                text_node = line_node.find("text")
+                detail_text = " ".join(text_node.itertext()).strip() if text_node is not None else ""
+
+                if name_text in line_symbols:
+                    return _map_mta_status(status_text, detail_text)
+
+        # Fallback: infer a broad system status from all subway lines.
+        system_statuses: list[str] = []
+        for line_node in root.findall(".//subway/line"):
+            status_text = (line_node.findtext("status") or "").strip()
+            text_node = line_node.find("text")
+            detail_text = " ".join(text_node.itertext()).strip() if text_node is not None else ""
+            system_statuses.append(_map_mta_status(status_text, detail_text))
+
+        if "Severe delays" in system_statuses:
+            return "Severe delays"
+        if "Minor delays" in system_statuses:
+            return "Minor delays"
+        return "On time"
+
+    except Exception:
+        return "On time"
 
 
 def geocode_address(address: str) -> dict | None:
@@ -51,10 +127,24 @@ def geocode_address(address: str) -> dict | None:
 
 def get_drive_eta(origin: dict, destination: dict) -> int:
     data = {
-        "origin": {"location": {"latLng": origin}},
-        "destination": {"location": {"latLng": destination}},
-        "travelMode": "DRIVE",
-    }
+    "origin": {
+        "location": {
+            "latLng": {
+                "latitude": origin["latitude"],
+                "longitude": origin["longitude"],
+            }
+        }
+    },
+    "destination": {
+        "location": {
+            "latLng": {
+                "latitude": destination["latitude"],
+                "longitude": destination["longitude"],
+            }
+        }
+    },
+    "travelMode": "DRIVE",
+}
 
     response = requests.post(URL, headers=HEADERS, json=data, timeout=15)
     result = response.json()
@@ -62,7 +152,15 @@ def get_drive_eta(origin: dict, destination: dict) -> int:
     if "routes" not in result or not result["routes"]:
         return 9999
 
-    return int(result["routes"][0]["duration"].replace("s", ""))
+    route = result["routes"][0]
+
+    duration = route["duration"]
+    polyline = route["polyline"]["encodedPolyline"]
+
+    return {
+    "eta_seconds": int(duration.replace("s", "")),
+    "polyline": polyline
+    }
 
 
 def _route_score(route: dict) -> int:
@@ -98,8 +196,22 @@ def _route_score(route: dict) -> int:
 
 def get_transit_eta(origin: dict, destination: dict) -> dict | int:
     data = {
-        "origin": {"location": {"latLng": origin}},
-        "destination": {"location": {"latLng": destination}},
+        "origin": {
+            "location": {
+                "latLng": {
+                    "latitude": origin["latitude"],
+                    "longitude": origin["longitude"],
+                }
+            }
+        },
+        "destination": {
+            "location": {
+                "latLng": {
+                    "latitude": destination["latitude"],
+                    "longitude": destination["longitude"],
+                }
+            }
+        },
         "travelMode": "TRANSIT",
         "departureTime": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "computeAlternativeRoutes": True,
@@ -123,6 +235,7 @@ def get_transit_eta(origin: dict, destination: dict) -> dict | int:
     departure = ""
     arrival = ""
     transit_legs = []
+    route_steps = []
 
     for step in steps:
         mode = step.get("travelMode")
@@ -165,10 +278,45 @@ def get_transit_eta(origin: dict, destination: dict) -> dict | int:
             ride_seconds += int(step["staticDuration"].replace("s", ""))
             transit_steps += 1
 
+    if transit_legs:
+        first_departure = transit_legs[0]["departure"]
+
+        route_steps = [
+            {
+                "type": "walk",
+                "text": f"👣 Walk {round(walk_seconds / 60)} min to {first_departure}"
+            }
+        ]
+
+        for i, leg in enumerate(transit_legs):
+            route_steps.append({
+                "type": "train",
+                "text": f"🚇 Take {leg['line']} from {leg['departure']} to {leg['arrival']}"
+            })
+
+            if i < len(transit_legs) - 1:
+                next_leg = transit_legs[i + 1]
+                route_steps.append({
+                    "type": "transfer",
+                    "text": f"🔁 Transfer at {leg['arrival']} to {next_leg['line']}"
+                })
+
+        route_steps.append({
+            "type": "walk",
+            "text": f"👣 Walk to {destination.get('label', 'destination')}"
+        })
+    else:
+        route_steps = [
+            {
+                "type": "walk",
+                "text": f"👣 Walk {round(walk_seconds / 60)} min"
+            }
+        ]
+
     if ride_seconds == 0:
         ride_seconds = max(seconds - walk_seconds, 0)
 
-    delay_status = get_mta_status()
+    delay_status = get_mta_status(line)
 
     return {
         "eta_seconds": seconds,
@@ -181,8 +329,8 @@ def get_transit_eta(origin: dict, destination: dict) -> dict | int:
         "departure": departure,
         "arrival": arrival,
         "transit_legs": transit_legs,
+        "route_steps": route_steps,
     }
-
 
 def get_weather(lat: float, lon: float) -> str:
     url = "https://api.open-meteo.com/v1/forecast"

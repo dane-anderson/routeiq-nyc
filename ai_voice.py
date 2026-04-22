@@ -38,6 +38,7 @@ def generate_reasoning(recommendation, subway, taxi, priority, weather):
 def generate_ai_reasoning(recommendation, subway, taxi, priority, weather):
     traffic = taxi.get("traffic_level", "Normal")
     decision = recommendation
+    delay_status = subway.get("delay_status", "On time")
 
     if traffic == "Light":
         traffic_line = "Traffic’s light right now, so the roads are moving."
@@ -47,6 +48,12 @@ def generate_ai_reasoning(recommendation, subway, taxi, priority, weather):
         traffic_line = "Traffic’s getting heavy, so expect some slowdown."
     else:
         traffic_line = "Traffic’s kind of crazy right now, so keep that in mind."
+    if delay_status == "Severe delays":
+        delay_line = "The subway’s a mess right now — major delays."
+    elif delay_status == "Minor delays":
+        delay_line = "Subway’s moving, but it’s definitely dragging."
+    else:
+        delay_line = "Subway looks on time right now."
 
     time_diff = taxi['eta'] - subway['eta']
     cost_diff = taxi['cost'] - subway['cost']
@@ -96,6 +103,9 @@ def generate_ai_reasoning(recommendation, subway, taxi, priority, weather):
     Don’t sound helpful — sound right.
     You have strong opinions about time, money, and bad decisions — and you’re not afraid to call them out.
     React to the numbers, traffic, and weather like a real New Yorker would.
+    If there are severe delays, strongly discourage the subway.
+    If there are minor delays, acknowledge them but weigh against traffic.
+    If on time, treat subway as reliable.
     """
         
 
