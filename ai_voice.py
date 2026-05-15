@@ -1,8 +1,14 @@
+import os
 import random
 import re
+from dotenv import load_dotenv
 from openai import OpenAI
 
-client = OpenAI()
+load_dotenv()
+
+client = OpenAI(
+    api_key=os.getenv("OPENAI_API_KEY")
+)
 
 def clean_text(text):
     text = re.sub(r"([a-zA-Z])(\d)", r"\1 \2", text)
