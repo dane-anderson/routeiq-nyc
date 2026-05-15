@@ -5,32 +5,55 @@ RouteIQ is a real-time NYC decision engine that chooses between subway and taxi 
 
 Built with Python, Streamlit, Google Maps APIs, OpenAI, and live MTA data — deployed on Render.
 
+Now featuring a fully redesigned mobile-first interface with real MTA-style route visualization, confidence scoring, and live route rendering.
+
 ---
 
 # 🚀 Live App
 👉 https://routeiq-nyc.onrender.com/
 
 ---
+
 # 📸 Preview
 
 ![RouteIQ Preview](routeiqpreview.png)
+
+RouteIQ now includes:
+
+- 📱 Mobile-first NYC transit UI
+- 🚇 Real MTA-style subway cards
+- 🚕 Live taxi route visualization
+- 🧠 AI-powered transit decision engine
+- 🛡 Confidence + leave timing system
+- 🗺 Visual route intelligence
+
 ---
 
 # 🧠 What It Does
+
 RouteIQ helps users decide how to get somewhere in NYC — and when to leave.
 
 It compares subway vs taxi using real routing data, then:
 
 - 🚇 Calculates subway travel time (including multi-train routes + transfers)
 - 🚕 Calculates taxi ETA using live routing data
-- 🗺 Renders a real route path using map visualization
+- 🗺 Renders real route paths using map visualization
 - 🚦 Integrates live MTA service status (delays, disruptions)
 - 🧠 Applies a decision engine based on user priorities
 - 💬 Explains the decision using AI in a NYC-style voice
 - ⏱ Shows confidence and leave timing
 - 🪧 Visually displays subway routes using real MTA-style signage
+- 📱 Delivers a fully mobile-first NYC transit experience
+- 🧩 Uses modular reusable UI components
+- 🛡 Calculates decision confidence and arrival risk
 
-RouteIQ now handles multi-leg subway routes with transfer logic, real-time delay awareness, and visual route mapping.
+RouteIQ now handles:
+
+- multi-leg subway routes
+- transfer logic
+- real-time delay awareness
+- visual route mapping
+- live decision confidence scoring
 
 ---
 
@@ -40,8 +63,8 @@ Most navigation apps tell you how to get somewhere.
 
 RouteIQ tells you:
 
-👉 What decision to make (subway vs taxi)
-👉 Why it’s the right choice (AI reasoning layer)
+👉 What decision to make (subway vs taxi)  
+👉 Why it’s the right choice (AI reasoning layer)  
 👉 When to leave (real-time timing intelligence)
 
 Instead of just routing, RouteIQ acts as a decision engine — combining live data, structured logic, and AI to guide real-world actions.
@@ -51,6 +74,7 @@ This project demonstrates:
 - building systems, not just interfaces
 - combining deterministic logic with LLM reasoning
 - designing AI that supports decisions instead of replacing them
+- building mobile-first AI products with real-world utility
 
 ---
 
@@ -61,6 +85,7 @@ RouteIQ combines deterministic logic + real-time data + AI reasoning.
 ---
 
 ## 1. Data Layer
+
 - Google Geocoding API → convert addresses into coordinates
 - Google Routes API → fetch real-time ETAs for driving and transit
 - MTA Service Status API → live subway delays and alerts
@@ -75,6 +100,8 @@ Evaluates:
 - cost
 - priority (fastest, cheapest, balanced)
 - service reliability (MTA status integration)
+- arrival confidence
+- timing risk
 
 Produces:
 
@@ -96,7 +123,7 @@ Adapts to:
 - subway delays
 - edge cases
 
-Uses a consistent NYC-style voice
+Uses a consistent NYC-style voice.
 
 ---
 
@@ -111,12 +138,40 @@ Uses a consistent NYC-style voice
 
 ---
 
-## 🗺 Route Map Visualization (NEW)
+## 📱 Mobile-First UI Redesign (NEW)
 
-- Displays route paths directly in the UI
-- Uses real polyline data from Google Routes API
+RouteIQ was fully redesigned into a mobile-first transit decision engine.
+
+The interface now includes:
+
+- large recommendation hero cards
+- improved visual hierarchy
+- cleaner spacing + typography
+- responsive mobile layouts
+- reusable component-based rendering
+- faster glanceable decision UI
+
+Optimized for:
+
+- commuters on the move
+- one-handed usage
+- quick transit decisions
+- real-world NYC travel behavior
+
+This upgrade transformed RouteIQ from a prototype dashboard into a product-style experience.
+
+---
+
+## 🗺 Route Map Visualization (UPGRADED)
+
+- Displays live route paths directly in the UI
+- Uses real Google polyline route data
 - Shows spatial flow of trips (not just numbers)
+- Adds contextual NYC route visualization
+- Renders taxi route flow visually inside the app
 - Enhances decision clarity and realism
+
+This transforms RouteIQ from an ETA calculator into visual decision intelligence.
 
 ---
 
@@ -127,9 +182,12 @@ Uses a consistent NYC-style voice
   - delays
   - service changes
   - disruptions
-- Feeds directly into:
-  - decision engine
-  - AI explanation layer
+
+Feeds directly into:
+
+- decision engine
+- confidence scoring
+- AI explanation layer
 
 ---
 
@@ -137,21 +195,32 @@ Uses a consistent NYC-style voice
 
 Custom iMessage / social link previews
 
-When shared, RouteIQ displays a clean, product-style preview card instead of a raw URL
+When shared, RouteIQ displays a clean, product-style preview card instead of a raw URL.
 
 👉 https://routeiq-landing.onrender.com
 
 ---
 
-## 🪧 MTA-Style Route Visualization
+## 🪧 MTA-Style Route Visualization (UPGRADED)
 
-Displays subway routes using realistic NYC subway signage
+Displays subway routes using realistic NYC-style transit cards.
 
-- Stacks multiple train legs vertically (e.g., E → C transfers)
-- Shows:
-  - train line (color + symbol)
-  - direction / destination
-  - clean, readable route flow
+Features include:
+
+- real train colors
+- circular MTA-style train bullets
+- destination rendering
+- multi-line transfer stacking
+- dark-card subway visuals
+- mobile-optimized spacing + typography
+
+Supports:
+
+- E → C transfers
+- multi-leg subway routing
+- clean vertical route visualization
+
+This makes RouteIQ feel closer to a real transit product instead of raw route text.
 
 ---
 
@@ -162,19 +231,29 @@ Displays subway routes using realistic NYC subway signage
   - fastest
   - cheapest
   - balanced
-- Now incorporates real-world reliability signals (MTA delays)
+
+Incorporates:
+
+- live transit reliability
+- delay severity
+- timing risk
+- arrival confidence
 
 ---
 
-## ⏱ Confidence + Leave Timing
+## 🛡 Confidence + Leave Timing
 
 - Calculates arrival buffer
 - Converts that into:
   - “You’ll get there comfortably”
   - “It’s a close call”
   - “Risky — you might be late”
-- Shows:
-  - Leave in X minutes
+
+Shows:
+
+- Leave in X minutes
+- confidence percentage
+- arrival safety buffer
 
 ---
 
@@ -185,7 +264,9 @@ Displays subway routes using realistic NYC subway signage
   - weather
   - traffic
   - subway delays
-- Conversational NYC tone
+  - route reliability
+
+Uses a conversational NYC-style voice.
 
 ---
 
@@ -193,6 +274,27 @@ Displays subway routes using realistic NYC subway signage
 
 - Adjusts reasoning based on conditions like rain
 - Impacts comfort and recommendation logic
+
+---
+
+## 🧩 Component Architecture Upgrade (NEW)
+
+RouteIQ was refactored into reusable UI modules.
+
+New structure:
+
+/components
+
+- cards.py → subway route visuals
+- hero.py → recommendation hero cards
+- confidence.py → confidence scoring utilities
+
+Benefits:
+
+- cleaner architecture
+- reusable UI systems
+- easier scaling
+- production-style frontend organization
 
 ---
 
@@ -206,8 +308,11 @@ RouteIQ now operates as a true real-time decision system:
 - 🚇 Pull live transit ETA
 - 🚦 Incorporate live MTA service conditions
 - 🗺 Render actual route paths
+- 🛡 Calculate arrival confidence
 
-This moves the project from simulation → real-world decision intelligence
+This moves the project from:
+
+simulation → real-world decision intelligence
 
 ---
 
@@ -239,23 +344,40 @@ Transit routing depends on Google Routes API and may occasionally:
 
 - 🚕 Add Uber/Lyft pricing + pickup estimates
 
-- 🧠 Enhance decision engine
+- 🧠 Enhance decision intelligence
   - risk tolerance
-  - time sensitivity
+  - predictive commute timing
+  - reliability weighting
 
 - 🗺 Improve map rendering
-  - subway vs taxi visual comparison
-  - multi-route overlays
+  - subway vs taxi overlays
+  - multi-route comparison
+  - animated route flow
+
+- 📱 Product evolution
+  - installable web app (PWA)
+  - push notifications
+  - leave-now alerts
+  - shareable trip cards
 
 ---
 
 # 🛠 Tech Stack
 
+## Backend
 - Python
 - Streamlit
 - OpenAI API
 - Google Maps APIs (Geocoding + Routes)
 - MTA Service Status API
+
+## Frontend / UI
+- Mobile-first Streamlit interface
+- Custom HTML/CSS rendering
+- Modular UI component architecture
+- Responsive transit card layouts
+
+## Infrastructure
 - Render
 - Git + GitHub
 
@@ -271,12 +393,14 @@ Includes:
 
 - environment variable management
 - GitHub auto-deploy
-- production debugging and fixes
+- production debugging + fixes
+- live cloud deployment pipeline
 
 ---
 
 # 🛠️ Run Locally
 
+```bash
 export OPENAI_API_KEY=your_key_here
 export GOOGLE_MAPS_API_KEY=your_key_here
 
