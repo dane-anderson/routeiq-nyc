@@ -28,7 +28,7 @@ st.markdown("""
 <style>
 .block-container {
     max-width: 520px;
-    padding: 1rem 1rem 2rem 1rem;
+    padding: 3rem 1rem 2rem 1rem;
 }
 
 html, body, [class*="css"] {
@@ -515,8 +515,9 @@ run = st.button(
 # RESULTS
 # -----------------------
 if run:
-    origin = geocode_address(origin_input)
-    destination = geocode_address(destination_input)
+    with st.spinner("🚇 Checking subway delays... 🚕 Reading traffic... 🧠 Comparing routes..."):
+        origin = geocode_address(origin_input)
+        destination = geocode_address(destination_input)
 
     if origin:
         origin["label"] = origin_input
@@ -577,24 +578,67 @@ if run:
     recommendation = result["recommendation"]
     decision_text = "🚇 Take the Subway" if recommendation == "subway" else "🚕 Take the Taxi"
 
-    st.markdown(
-        f"""
-        <div class="hero">
-            <div class="hero-top">ROUTEIQ RECOMMENDS</div>
-            <div class="hero-main">{decision_text}</div>
-            <div class="hero-chip">
-                Saves {abs(subway["eta"] - taxi["eta"])} minutes • More predictable
-            </div>
+    hero_html = (
+        f'<div class="hero">'
 
-            <div class="leave-box">
-                <div class="leave-label">Leave in</div>
-                <div class="leave-number">{max(result["leave_in"], 0)} min</div>
-                <div style="font-size:13px; color:#e5e7eb; margin-top:4px;">to arrive on time</div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
+            f'<div class="hero-top">'
+                f'ROUTEIQ RECOMMENDS'
+            f'</div>'
+
+            f'<div class="hero-main">'
+                f'{decision_text}'
+            f'</div>'
+
+            f'<div class="hero-chip">'
+                f'Saves {abs(subway["eta"] - taxi["eta"])} minutes • More predictable'
+            f'</div>'
+
+            f'<div class="leave-box">'
+
+                f'<div class="leave-label">'
+                    f'Leave in'
+                f'</div>'
+
+                f'<div class="leave-number">'
+                    f'{max(result["leave_in"], 0)} min'
+                f'</div>'
+
+                f'<div style="font-size:13px; color:#e5e7eb; margin-top:4px;">'
+                    f'to arrive on time'
+                f'</div>'
+
+            f'</div>'
+
+        f'</div>'
     )
+
+    st.markdown(hero_html, unsafe_allow_html=True)
+
+    summary_chips_html = (
+        f'<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:14px;">'
+
+            f'<div style="background:#ffffff; border:1px solid #ececec; border-radius:16px; padding:12px; text-align:center;">'
+                f'<div style="font-size:18px;">🚇</div>'
+                f'<div style="font-size:18px; font-weight:900;">{subway["eta"]} min</div>'
+                f'<div style="font-size:11px; color:#666; font-weight:700;">Subway</div>'
+            f'</div>'
+
+            f'<div style="background:#ffffff; border:1px solid #ececec; border-radius:16px; padding:12px; text-align:center;">'
+                f'<div style="font-size:18px;">🚕</div>'
+                f'<div style="font-size:18px; font-weight:900;">{taxi["eta"]} min</div>'
+                f'<div style="font-size:11px; color:#666; font-weight:700;">Taxi</div>'
+            f'</div>'
+
+            f'<div style="background:#ffffff; border:1px solid #ececec; border-radius:16px; padding:12px; text-align:center;">'
+                f'<div style="font-size:18px;">💰</div>'
+                f'<div style="font-size:18px; font-weight:900;">${abs(taxi["cost"] - subway["cost"])}</div>'
+                f'<div style="font-size:11px; color:#666; font-weight:700;">Difference</div>'
+            f'</div>'
+
+        f'</div>'
+    )
+
+    st.markdown(summary_chips_html, unsafe_allow_html=True)
 
     subway_html = (
         f'<div class="card">'
