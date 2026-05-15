@@ -14,6 +14,28 @@ def build_hero_card(decision_text: str, subway: dict, taxi: dict, result: dict) 
                 f'Saves {abs(subway["eta"] - taxi["eta"])} minutes • More predictable'
             f'</div>'
 
+            f'<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">'
+
+                f'<div style="background:rgba(255,255,255,0.45); '
+                f'padding:6px 10px; border-radius:999px; '
+                f'font-size:11px; font-weight:900; color:#4d3a00;">'
+                    f'🚇 {subway["delay_status"]}'
+                f'</div>'
+
+                f'<div style="background:rgba(255,255,255,0.45); '
+                f'padding:6px 10px; border-radius:999px; '
+                f'font-size:11px; font-weight:900; color:#4d3a00;">'
+                    f'🚕 {taxi["traffic_level"]} traffic'
+                f'</div>'
+
+                f'<div style="background:rgba(255,255,255,0.45); '
+                f'padding:6px 10px; border-radius:999px; '
+                f'font-size:11px; font-weight:900; color:#4d3a00;">'
+                    f'⏱ {result["buffer"]} min buffer'
+                f'</div>'
+
+            f'</div>'
+
             f'<div class="leave-box">'
 
                 f'<div class="leave-label">'
