@@ -4,6 +4,7 @@ from ai_voice import generate_reasoning
 from routes_api import get_drive_eta, get_transit_eta, geocode_address
 from utils.confidence import get_confidence_score
 from components.cards import build_train_boxes_html
+from components.hero import build_hero_card
 
 LINE_COLORS = {
     "1": "#EE352E", "2": "#EE352E", "3": "#EE352E",
@@ -529,40 +530,7 @@ if run:
     recommendation = result["recommendation"]
     decision_text = "🚇 Take the Subway" if recommendation == "subway" else "🚕 Take the Taxi"
 
-    hero_html = (
-        f'<div class="hero">'
-
-            f'<div class="hero-top">'
-                f'ROUTEIQ RECOMMENDS'
-            f'</div>'
-
-            f'<div class="hero-main">'
-                f'{decision_text}'
-            f'</div>'
-
-            f'<div class="hero-chip">'
-                f'Saves {abs(subway["eta"] - taxi["eta"])} minutes • More predictable'
-            f'</div>'
-
-            f'<div class="leave-box">'
-
-                f'<div class="leave-label">'
-                    f'Leave in'
-                f'</div>'
-
-                f'<div class="leave-number">'
-                    f'{max(result["leave_in"], 0)} min'
-                f'</div>'
-
-                f'<div style="font-size:13px; color:#e5e7eb; margin-top:4px;">'
-                    f'to arrive on time'
-                f'</div>'
-
-            f'</div>'
-
-        f'</div>'
-    )
-
+    hero_html = build_hero_card(decision_text, subway, taxi, result)
     st.markdown(hero_html, unsafe_allow_html=True)
 
     summary_chips_html = (
