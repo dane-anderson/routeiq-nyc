@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timezone
-
+from datetime import timedelta
 import requests
 from dotenv import load_dotenv
 import xml.etree.ElementTree as ET
@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 load_dotenv()
 
 API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
+PLACES_API_KEY = os.getenv("PLACES_API_KEY")
 
 MTA_FEED_URL = "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fgtfs"
 URL = "https://routes.googleapis.com/directions/v2:computeRoutes"
@@ -359,7 +360,58 @@ def get_weather(lat: float, lon: float) -> str:
     except Exception:
         return "clear"
 
+def get_nearby_coffee(destination: dict, limit: int = 3) -> list[dict]:
+    url = "https://places.googleapis.com/v1/places:searchNearby"
 
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": PLACES_API_KEY,
+        "X-Goog-FieldMask": (
+            "places.displayName,"
+            "places.rating,"
+            "places.userRatingCount,"
+            "places.googleMapsUri"
+        ),
+    }
+
+    payload = {
+        "includedTypes": ["cafe"],
+        "maxResultCount": limit,
+        "rankPreference": "DISTANCE",
+        "locationRestriction": {
+            "circle": {
+                "center": {
+                    "latitude": destination["latitude"],
+                    "longitude": destination["longitude"],
+                },
+                "radius": 900,
+            }
+        },
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=10)
+        data = response.json()
+
+        print("COFFEE API STATUS:", response.status_code)
+        print("COFFEE API RESPONSE:", data)
+
+        coffee_spots = []
+        for place in data.get("places", [])[:limit]:
+            coffee_spots.append({
+                "name": place.get("displayName", {}).get("text", "Coffee spot"),
+                "rating": place.get("rating", "—"),
+                "reviews": place.get("userRatingCount", 0),
+                "url": place.get("googleMapsUri", "#"),
+            })
+
+        return coffee_spots
+
+    except Exception as e:
+        print("COFFEE API ERROR:", e)
+        return []
+
+    
 if __name__ == "__main__":
     origin = {"latitude": 40.7580, "longitude": -73.9855}
     destination = {"latitude": 40.7128, "longitude": -74.0060}

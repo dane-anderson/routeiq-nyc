@@ -85,7 +85,14 @@ def generate_ai_reasoning(recommendation, subway, taxi, priority, weather):
 
     Talk like you’re texting a friend who’s about to make a bad travel decision.
 
-    Decision: {decision}
+    FINAL ROUTEIQ DECISION: {decision}
+
+    You are not choosing between subway and taxi.
+    RouteIQ already chose: {decision}.
+    Your job is to explain why that choice makes sense.
+
+    Do not recommend the opposite option.
+    Do not contradict the final RouteIQ decision.
     
     WEATHER:
     Current weather: {weather}
