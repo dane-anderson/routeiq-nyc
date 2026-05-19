@@ -579,6 +579,20 @@ if run:
 
         taxi_data = get_drive_eta(origin, destination)
         subway_data = get_transit_eta(origin, destination)
+        if not isinstance(subway_data, dict):
+            subway_data = {
+                "eta_seconds": 9999,
+                "walk_minutes": 0,
+                "ride_minutes": 0,
+                "transfers": 0,
+                "delay_status": "Unavailable",
+                "line": "",
+                "departure": "",
+                "arrival": "",
+                "transit_legs": [],
+                "route_steps": [],
+            }
+
         route_steps = subway_data.get("route_steps", [])
 
         subway_eta = round(subway_data["eta_seconds"] / 60)
