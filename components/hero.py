@@ -1,4 +1,16 @@
 def build_hero_card(decision_text: str, subway: dict, taxi: dict, result: dict) -> str:
+
+    delay_status = subway.get("delay_status", "On time")
+
+    if delay_status == "On time":
+        delay_bg = "#e8f5e9"
+        delay_color = "#2e7d32"
+    elif delay_status == "Minor delays":
+        delay_bg = "#fff8e1"
+        delay_color = "#f57c00"
+    else:
+        delay_bg = "#ffebee"
+        delay_color = "#c62828"
     return (
         f'<div class="hero">'
 
@@ -16,9 +28,9 @@ def build_hero_card(decision_text: str, subway: dict, taxi: dict, result: dict) 
 
             f'<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">'
 
-                f'<div style="background:rgba(255,255,255,0.45); '
+                f'<div style="background:{delay_bg}; '
                 f'padding:6px 10px; border-radius:999px; '
-                f'font-size:11px; font-weight:900; color:#4d3a00;">'
+                f'font-size:11px; font-weight:900; color:{delay_color};">'
                     f'🚇 {subway["delay_status"]}'
                 f'</div>'
 

@@ -20,6 +20,7 @@ HEADERS = {
         "routes.duration,"
         "routes.polyline.encodedPolyline,"
         "routes.legs.steps,"
+        "routes.legs.steps.polyline.encodedPolyline,"
         "routes.legs.steps.travelMode,"
         "routes.legs.steps.staticDuration,"
         "routes.legs.steps.transitDetails"
@@ -103,7 +104,36 @@ def get_mta_status(line_symbol: str = "") -> str:
 
     except Exception:
         return "On time"
+    
+def get_mta_status_detail(line_symbol: str = "") -> dict:
+    status = get_mta_status(line_symbol)
 
+    if status == "Severe delays":
+        return {
+            "status": "Severe delays",
+            "detail": "Major service disruption reported",
+            "delay_minutes": 8,
+        }
+
+    if status == "Minor delays":
+        return {
+            "status": "Minor delays",
+            "detail": "Service changes or delays reported",
+            "delay_minutes": 4,
+        }
+
+    if status == "Unavailable":
+        return {
+            "status": "Unavailable",
+            "detail": "Live status unavailable",
+            "delay_minutes": 0,
+        }
+
+    return {
+        "status": "On time",
+        "detail": "No active delays reported",
+        "delay_minutes": 0,
+    }
 
 def geocode_address(address: str) -> dict | None:
     url = "https://maps.googleapis.com/maps/api/geocode/json"
@@ -263,12 +293,15 @@ def get_transit_eta(origin: dict, destination: dict) -> dict | int:
 
             current_departure = stop_details.get("departureStop", {}).get("name", "")
             current_arrival = stop_details.get("arrivalStop", {}).get("name", "")
+            step_polyline = step.get("polyline", {}).get("encodedPolyline", "")
+
 
             transit_legs.append({
                 "line": current_line,
                 "departure": current_departure,
                 "arrival": current_arrival,
                 "vehicle_type": vehicle_type,
+                "polyline": step_polyline,
             })
 
             if not departure:
@@ -317,14 +350,16 @@ def get_transit_eta(origin: dict, destination: dict) -> dict | int:
     if ride_seconds == 0:
         ride_seconds = max(seconds - walk_seconds, 0)
 
-    delay_status = get_mta_status(line)
+    mta_status = get_mta_status_detail(line)
 
     return {
         "eta_seconds": seconds,
         "walk_minutes": round(walk_seconds / 60),
         "ride_minutes": round(ride_seconds / 60),
         "transfers": max(transit_steps - 1, 0),
-        "delay_status": delay_status,
+        "delay_status": mta_status["status"],
+        "delay_detail": mta_status["detail"],
+        "delay_minutes": mta_status["delay_minutes"],
         "best_route": best_route,
         "line": line,
         "departure": departure,
@@ -333,35 +368,95 @@ def get_transit_eta(origin: dict, destination: dict) -> dict | int:
         "route_steps": route_steps,
     }
 
-def get_weather(lat: float, lon: float) -> str:
+def get_weather_at_arrival(lat: float, lon: float, eta_minutes: int) -> dict:
+    arrival_time = datetime.now() + timedelta(minutes=eta_minutes)
+
     url = "https://api.open-meteo.com/v1/forecast"
     params = {
         "latitude": lat,
         "longitude": lon,
-        "current_weather": True,
+        "hourly": "temperature_2m,apparent_temperature,precipitation,rain,snowfall,cloud_cover,weather_code",
+        "temperature_unit": "fahrenheit",
+        "timezone": "America/New_York",
+        "forecast_days": 1,
     }
 
     try:
-        response = requests.get(url, params=params, timeout=5)
+        response = requests.get(url, params=params, timeout=8)
         data = response.json()
-        code = data["current_weather"]["weathercode"]
+        hourly = data["hourly"]
 
-        if code in [0]:
-            return "clear"
-        elif code in [1, 2, 3]:
-            return "cloudy"
-        elif code in [51, 53, 55, 61, 63, 65]:
-            return "rain"
-        elif code in [71, 73, 75]:
-            return "snow"
+        times = hourly["time"]
+
+        closest_index = min(
+            range(len(times)),
+            key=lambda i: abs(datetime.fromisoformat(times[i]) - arrival_time)
+        )
+
+        temp = round(hourly["temperature_2m"][closest_index])
+        feels_like = round(hourly["apparent_temperature"][closest_index])
+        rain = hourly["rain"][closest_index]
+        snow = hourly["snowfall"][closest_index]
+        cloud_cover = hourly["cloud_cover"][closest_index]
+
+        if snow >= 0.25:
+            condition = "Heavy snow"
+            detail = "Heavy snowfall expected at arrival"
+            icon = "❄️"
+        elif snow > 0.05:
+            condition = "Snow"
+            detail = "Snow expected at arrival"
+            icon = "❄️"
+        elif snow > 0:
+            condition = "Light snow"
+            detail = "Light snowfall possible"
+            icon = "🌨️"
+        elif rain >= 0.35:
+            condition = "Heavy rain"
+            detail = "Heavy rain expected at arrival"
+            icon = "⛈️"
+        elif rain >= 0.12:
+            condition = "Rain"
+            detail = "Rain likely at arrival"
+            icon = "🌧️"
+        elif rain > 0:
+            condition = "Sprinkling"
+            detail = "Light drizzle expected at arrival"
+            icon = "🌦️"
+        elif cloud_cover >= 80:
+            condition = "Cloudy skies"
+            detail = "Overcast skies at arrival"
+            icon = "☁️"
+        elif cloud_cover >= 45:
+            condition = "Partly cloudy"
+            detail = "Some clouds expected at arrival"
+            icon = "⛅"
         else:
-            return "clear"
+            condition = "Clear skies"
+            detail = "Clear conditions expected at arrival"
+            icon = "☀️"
+
+        return {
+            "icon": icon,
+            "condition": condition,
+            "detail": detail,
+            "temp": temp,
+            "feels_like": feels_like,
+            "arrival_time": arrival_time.strftime("%I:%M %p").lstrip("0"),
+        }
 
     except Exception:
-        return "clear"
+        return {
+            "icon": "🌤️",
+            "condition": "Weather unavailable",
+            "detail": "Couldn’t load arrival weather",
+            "temp": "—",
+            "feels_like": "—",
+            "arrival_time": arrival_time.strftime("%I:%M %p").lstrip("0"),
+        }
 
-def get_nearby_coffee(destination: dict, limit: int = 3) -> list[dict]:
-    url = "https://places.googleapis.com/v1/places:searchNearby"
+def get_nearby_coffee(destination: dict) -> dict | None:
+    url = "https://places.googleapis.com/v1/places:searchText"
 
     headers = {
         "Content-Type": "application/json",
@@ -375,16 +470,15 @@ def get_nearby_coffee(destination: dict, limit: int = 3) -> list[dict]:
     }
 
     payload = {
-        "includedTypes": ["cafe"],
-        "maxResultCount": limit,
-        "rankPreference": "DISTANCE",
-        "locationRestriction": {
+        "textQuery": "coffee shop near destination",
+        "maxResultCount": 8,
+        "locationBias": {
             "circle": {
                 "center": {
                     "latitude": destination["latitude"],
                     "longitude": destination["longitude"],
                 },
-                "radius": 900,
+                "radius": 350,
             }
         },
     }
@@ -393,31 +487,142 @@ def get_nearby_coffee(destination: dict, limit: int = 3) -> list[dict]:
         response = requests.post(url, headers=headers, json=payload, timeout=10)
         data = response.json()
 
-        print("COFFEE API STATUS:", response.status_code)
-        print("COFFEE API RESPONSE:", data)
-
         coffee_spots = []
-        for place in data.get("places", [])[:limit]:
-            coffee_spots.append({
-                "name": place.get("displayName", {}).get("text", "Coffee spot"),
-                "rating": place.get("rating", "—"),
-                "reviews": place.get("userRatingCount", 0),
-                "url": place.get("googleMapsUri", "#"),
-            })
 
-        return coffee_spots
+        for place in data.get("places", []):
+            rating = place.get("rating", 0)
+            reviews = place.get("userRatingCount", 0)
+
+            if rating and reviews >= 25:
+                coffee_spots.append({
+                    "name": place.get("displayName", {}).get("text", "Coffee shop"),
+                    "rating": rating,
+                    "reviews": reviews,
+                    "url": place.get("googleMapsUri", "#"),
+                })
+
+        if not coffee_spots:
+            return None
+
+        return sorted(
+            coffee_spots,
+            key=lambda spot: (spot["rating"], spot["reviews"]),
+            reverse=True
+        )[0]
 
     except Exception as e:
         print("COFFEE API ERROR:", e)
-        return []
+        return None
 
+def get_best_nearby_bagel(destination: dict) -> dict | None:
+    url = "https://places.googleapis.com/v1/places:searchText"
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": PLACES_API_KEY,
+        "X-Goog-FieldMask": (
+            "places.displayName,"
+            "places.rating,"
+            "places.userRatingCount,"
+            "places.googleMapsUri"
+        ),
+    }
+
+    payload = {
+        "textQuery": "bagel shop near destination",
+        "maxResultCount": 8,
+        "locationBias": {
+            "circle": {
+                "center": {
+                    "latitude": destination["latitude"],
+                    "longitude": destination["longitude"],
+                },
+                "radius": 350,
+            }
+        },
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=10)
+        data = response.json()
+
+        bagel_spots = []
+
+        for place in data.get("places", []):
+            rating = place.get("rating", 0)
+            reviews = place.get("userRatingCount", 0)
+
+            if rating and reviews:
+                bagel_spots.append({
+                    "name": place.get("displayName", {}).get("text", "Bagel shop"),
+                    "rating": rating,
+                    "reviews": reviews,
+                    "url": place.get("googleMapsUri", "#"),
+                })
+
+        if not bagel_spots:
+            return None
+
+        return sorted(
+            bagel_spots,
+            key=lambda spot: (spot["rating"], spot["reviews"]),
+            reverse=True
+        )[0]
+
+    except Exception as e:
+        print("BAGEL API ERROR:", e)
+        return None
     
-if __name__ == "__main__":
-    origin = {"latitude": 40.7580, "longitude": -73.9855}
-    destination = {"latitude": 40.7128, "longitude": -74.0060}
+def get_best_nearby_bodega(destination: dict) -> dict | None:
+    url = "https://places.googleapis.com/v1/places:searchText"
 
-    drive = get_drive_eta(origin, destination)
-    transit = get_transit_eta(origin, destination)
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": PLACES_API_KEY,
+        "X-Goog-FieldMask": (
+            "places.displayName,"
+            "places.rating,"
+            "places.userRatingCount,"
+            "places.googleMapsUri"
+        ),
+    }
 
-    print("Drive:", drive)
-    print("Transit:", transit)
+    payload = {
+        "textQuery": "deli grocery convenience store bodega",
+        "maxResultCount": 8,
+        "locationBias": {
+            "circle": {
+                "center": {
+                    "latitude": destination["latitude"],
+                    "longitude": destination["longitude"],
+                },
+                "radius": 350,
+            }
+        },
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=10)
+        data = response.json()
+
+        bodega_spots = []
+
+        for place in data.get("places", []):
+            rating = place.get("rating", 0)
+            reviews = place.get("userRatingCount", 0)
+
+            bodega_spots.append({
+                "name": place.get("displayName", {}).get("text", "Bodega"),
+                "rating": rating,
+                "reviews": reviews,
+                "url": place.get("googleMapsUri", "#"),
+            })
+
+        if not bodega_spots:
+            return None
+
+        return bodega_spots[0]
+
+    except Exception as e:
+        print("BODEGA API ERROR:", e)
+        return None

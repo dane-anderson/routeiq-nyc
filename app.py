@@ -1,14 +1,32 @@
 import streamlit as st
+from datetime import datetime
+
 from decision_engine import make_decision
 from ai_voice import generate_reasoning
-from routes_api import get_drive_eta, get_transit_eta, geocode_address
+from routes_api import (
+
+    get_drive_eta,
+
+    get_transit_eta,
+
+    geocode_address,
+
+    get_nearby_coffee,
+
+    get_best_nearby_bagel,
+
+    get_best_nearby_bodega,
+
+    get_weather_at_arrival
+
+)
 from utils.confidence import get_confidence_score
 from components.cards import build_train_boxes_html
 from components.hero import build_hero_card
 import pandas as pd
 import pydeck as pdk
 import base64
-from routes_api import get_drive_eta, get_transit_eta, geocode_address, get_nearby_coffee
+
 
 LINE_COLORS = {
     "1": "#EE352E", "2": "#EE352E", "3": "#EE352E",
@@ -22,15 +40,14 @@ LINE_COLORS = {
     "L": "#A7A9AC",
 }
 
+
 st.set_page_config(
     page_title="RouteIQ-NYC",
     page_icon="🚕",
     layout="wide"
 )
 
-# -----------------------
-# DESKTOP WORKSPACE STYLE
-# -----------------------
+
 st.markdown("""
 <style>
 .block-container {
@@ -201,12 +218,6 @@ html, body, [class*="css"] {
     box-shadow: none !important;
 }
 
-.stButton > button:hover {
-    background: #f0ba19 !important;
-    color: #111111 !important;
-    border: none !important;
-}
-
 .footer-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -219,49 +230,36 @@ html, body, [class*="css"] {
     padding: 12px;
     text-align: center;
 }
-
-@media (max-width: 800px) {
-    .block-container {
-        padding: 2rem 1rem;
-    }
-
-    .app-header {
-        display: block;
-    }
-
-    .update {
-        margin-top: 12px;
-    }
-
-    .footer-grid {
-        grid-template-columns: 1fr;
-    }
-}
 </style>
 """, unsafe_allow_html=True)
 
 
-# -----------------------
-# HELPERS
-# -----------------------
+def image_to_data_url(path: str) -> str:
+    with open(path, "rb") as image_file:
+        encoded = base64.b64encode(image_file.read()).decode()
+    return f"data:image/png;base64,{encoded}"
+
+
+def hex_to_rgb(hex_color: str) -> list[int]:
+    hex_color = hex_color.lstrip("#")
+    return [int(hex_color[i:i + 2], 16) for i in (0, 2, 4)]
+
+
 def get_line_badges_html(subway_data: dict) -> str:
     transit_legs = subway_data.get("transit_legs", [])
     symbols = []
 
-    if transit_legs:
-        for leg in transit_legs:
-            line_text = leg.get("line", "")
-            if not line_text:
-                continue
-            symbol = line_text.split(" ")[0]
+    for leg in transit_legs:
+        line_text = leg.get("line", "")
+        if line_text:
+            symbol = line_text.split("/")[0].split(" ")[0]
             if symbol and symbol not in symbols:
                 symbols.append(symbol)
-    else:
+
+    if not symbols:
         line_text = subway_data.get("line", "")
         if line_text:
-            symbol = line_text.split(" ")[0]
-            if symbol:
-                symbols.append(symbol)
+            symbols.append(line_text.split("/")[0].split(" ")[0])
 
     if not symbols:
         return ""
@@ -317,143 +315,99 @@ def decode_polyline(polyline_str: str) -> list[tuple[float, float]]:
 
     return coordinates
 
-
-def get_nyc_context_labels(points: list[tuple[float, float]]) -> list[dict]:
-    lats = [p[0] for p in points]
-    lons = [p[1] for p in points]
-
-    min_lat, max_lat = min(lats), max(lats)
-    min_lon, max_lon = min(lons), max(lons)
-
-    labels = []
-
-    if max_lat > 40.74 and min_lat < 40.79 and max_lon > -74.01 and min_lon < -73.96:
-        labels.append({"name": "Midtown", "lat": 40.754, "lon": -73.984, "kind": "area"})
-        labels.append({"name": "Empire State", "lat": 40.7484, "lon": -73.9857, "kind": "landmark"})
-
-    if min_lat < 40.73 and max_lon > -74.02 and min_lon < -73.98:
-        labels.append({"name": "Lower Manhattan", "lat": 40.7128, "lon": -74.0060, "kind": "area"})
-        labels.append({"name": "Wall St", "lat": 40.706, "lon": -74.009, "kind": "landmark"})
-
-    if min_lat < 40.75 and max_lat > 40.72 and min_lon < -73.99 and max_lon > -74.01:
-        labels.append({"name": "West Village", "lat": 40.735, "lon": -74.003, "kind": "landmark"})
-
-    if min_lon > -74.02 and max_lon > -73.98 and min_lat < 40.72:
-        labels.append({"name": "Brooklyn", "lat": 40.678, "lon": -73.944, "kind": "area"})
-
-    if min_lon < -73.99 and max_lon > -73.98:
-        labels.append({"name": "East River", "lat": 40.72, "lon": -73.975, "kind": "water"})
-
-    return labels
-
-
-def build_taxi_map_html(origin: dict, destination: dict, origin_label: str, destination_label: str, polyline: str) -> str:
-    points = decode_polyline(polyline) if polyline else []
-
-    if len(points) < 2:
-        points = [
-            (origin["latitude"], origin["longitude"]),
-            (destination["latitude"], destination["longitude"]),
-        ]
-
-    context_labels = get_nyc_context_labels(points)
-
-    lats = [p[0] for p in points]
-    lons = [p[1] for p in points]
-
-    min_lat, max_lat = min(lats), max(lats)
-    min_lon, max_lon = min(lons), max(lons)
-
-    lat_range = max(max_lat - min_lat, 0.01)
-    lon_range = max(max_lon - min_lon, 0.01)
-
-    def scale_point(lat: float, lon: float) -> tuple[float, float]:
-        x = 30 + ((lon - min_lon) / lon_range) * 460
-        y = 145 - ((lat - min_lat) / lat_range) * 115
-        return x, y
-
-    scaled_points = [scale_point(lat, lon) for lat, lon in points]
-    start_x, start_y = scaled_points[0]
-    end_x, end_y = scaled_points[-1]
-
-    path_points = " ".join(f"L {x:.1f} {y:.1f}" for x, y in scaled_points[1:])
-    path_d = f"M {scaled_points[0][0]:.1f} {scaled_points[0][1]:.1f} {path_points}"
-
-    taxi_idx = max(1, len(scaled_points) // 2)
-    taxi_x, taxi_y = scaled_points[taxi_idx]
-
-    labels_svg = "".join(
-        f'<text x="{scale_point(label["lat"], label["lon"])[0]:.1f}" '
-        f'y="{scale_point(label["lat"], label["lon"])[1]:.1f}" '
-        f'font-size="11" font-weight="900" '
-        f'fill={"#7FA6BF" if label["kind"] == "water" else "#7A7A7A"} '
-        f'opacity="0.75" text-anchor="middle">{label["name"]}</text>'
-        for label in context_labels
-    )
-
-    return (
-        f'<div style="margin-top:14px; background:#EEF5F8; border:1px solid #DDE8EE; '
-        f'border-radius:18px; height:220px; position:relative; overflow:hidden;">'
-
-            f'<div style="position:absolute; inset:0; background:'
-            f'linear-gradient(90deg, rgba(30,90,120,0.08) 1px, transparent 1px), '
-            f'linear-gradient(rgba(30,90,120,0.08) 1px, transparent 1px); '
-            f'background-size:34px 34px;"></div>'
-
-            f'<div style="position:absolute; inset:0; background:'
-            f'radial-gradient(circle at 70% 45%, rgba(143,196,220,0.55), transparent 28%), '
-            f'radial-gradient(circle at 18% 72%, rgba(143,196,220,0.35), transparent 26%);"></div>'
-
-            f'<svg viewBox="0 0 520 180" style="position:absolute; inset:0; width:100%; height:100%;">'
-
-                f'<path d="M 0 78 C 90 58, 145 70, 230 64 C 320 58, 405 42, 520 56" '
-                f'stroke="rgba(255,255,255,0.8)" stroke-width="14" fill="none" stroke-linecap="round"/>'
-                f'<path d="M 0 118 C 120 100, 180 120, 270 112 C 370 102, 430 124, 520 108" '
-                f'stroke="rgba(255,255,255,0.75)" stroke-width="11" fill="none" stroke-linecap="round"/>'
-                f'<path d="M 155 0 C 170 60, 155 95, 180 180" '
-                f'stroke="rgba(255,255,255,0.65)" stroke-width="9" fill="none" stroke-linecap="round"/>'
-                f'<path d="M 370 0 C 350 55, 382 102, 360 180" '
-                f'stroke="rgba(255,255,255,0.65)" stroke-width="9" fill="none" stroke-linecap="round"/>'
-
-                f'{labels_svg}'
-
-                f'<path d="{path_d}" stroke="#FFC72C" stroke-width="7" fill="none" '
-                f'stroke-linecap="round" stroke-linejoin="round" />'
-
-                f'<circle cx="{start_x:.1f}" cy="{start_y:.1f}" r="7" fill="#FFFFFF" stroke="#111111" stroke-width="3" />'
-                f'<circle cx="{end_x:.1f}" cy="{end_y:.1f}" r="8" fill="#FFC72C" stroke="#111111" stroke-width="3" />'
-
-                f'<text x="{taxi_x - 12:.1f}" y="{taxi_y - 8:.1f}" font-size="24">🚕</text>'
-            f'</svg>'
-
-            f'<div style="position:absolute; left:14px; top:12px; background:#111111; color:#FFFFFF; '
-            f'border-radius:999px; padding:6px 10px; font-size:11px; font-weight:900;">Taxi route preview</div>'
-
-            f'<div style="position:absolute; left:{max(start_x - 30, 12):.1f}px; top:{max(start_y - 36, 42):.1f}px; '
-            f'background:#111111; color:#FFFFFF; border-radius:10px; padding:5px 8px; font-size:11px; '
-            f'font-weight:900; max-width:145px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{origin_label}</div>'
-
-            f'<div style="position:absolute; left:{min(end_x - 28, 350):.1f}px; top:{min(end_y + 12, 168):.1f}px; '
-            f'background:#111111; color:#FFFFFF; border-radius:10px; padding:5px 8px; font-size:11px; '
-            f'font-weight:900; max-width:145px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{destination_label}</div>'
-
-        f'</div>'
-    )
-def build_live_destination_html(destination_name, weather, subway_status, coffee_spots):
+def build_live_destination_html(destination_name, weather, subway_status, subway_detail, subway_delay_minutes, coffee_spots, bagel_spot, bodega_spot):
     coffee_html = ""
-
     if coffee_spots:
-        for spot in coffee_spots:
-            coffee_html += (
-                f'<div style="padding:8px 0; border-bottom:1px solid #eeeeee;">'
-                    f'<div style="font-weight:800;">☕ <a href="{spot["url"]}" target="_blank" style="color:#111111; text-decoration:none;">{spot["name"]}</a></div>'
-                    f'<div style="font-size:13px; color:#666; margin-top:3px;">Rating: {spot["rating"]} • {spot["reviews"]} reviews</div>'
+        spot = coffee_spots
+
+        coffee_html = (
+            f'<div style="padding:8px 0;">'
+                f'<div style="font-weight:800;" '
+                    f'<a href="{spot["url"]}" target="_blank" '
+                    f'style="color:#111111; text-decoration:none;">'
+                        f'{spot["name"]}'
+                    f'</a>'
                 f'</div>'
-            )
+                f'<div style="font-size:13px; color:#666; margin-top:3px;">'
+                    f'⭐ {spot["rating"]} • {spot["reviews"]} reviews'
+                f'</div>'
+                f'<div style="font-size:12px; color:#999; margin-top:4px;">'
+                    f'Top rated coffee near destination'
+                f'</div>'
+            f'</div>'
+        )
     else:
         coffee_html = (
-            f'<div style="font-size:13px; color:#666;">No nearby coffee spots found.</div>'
+            f'<div style="font-size:13px; color:#666;">'
+                f'No nearby coffee spots found.'
+            f'</div>'
         )
+
+    bagel_html = ""
+
+    if bagel_spot:
+        spot = bagel_spot
+
+        bagel_html = (
+            f'<div style="padding:8px 0;">'
+                f'<div style="font-weight:800;"'
+                    f'<a href="{spot["url"]}" target="_blank" '
+                    f'style="color:#111111; text-decoration:none;">'
+                        f'{spot["name"]}'
+                    f'</a>'
+                f'</div>'
+                f'<div style="font-size:13px; color:#666; margin-top:3px;">'
+                    f'⭐ {spot["rating"]} • {spot["reviews"]} reviews'
+                f'</div>'
+                f'<div style="font-size:12px; color:#999; margin-top:4px;">'
+                    f'Top rated bagel shop near destination'
+                f'</div>'
+            f'</div>'
+        )
+    else:
+        bagel_html = (
+            f'<div style="font-size:13px; color:#666;">'
+                f'No nearby bagel shops found.'
+            f'</div>'
+        )
+
+    bodega_html = ""
+
+    if bodega_spot:
+        spot = bodega_spot
+
+        bodega_html = (
+            f'<div style="padding:8px 0;">'
+                f'<div style="font-weight:800;" '
+                    f'<a href="{spot["url"]}" target="_blank" '
+                    f'style="color:#111111; text-decoration:none;">'
+                        f'{spot["name"]}'
+                    f'</a>'
+                f'</div>'
+                f'<div style="font-size:13px; color:#666; margin-top:3px;">'
+                    f'⭐ {spot["rating"]} • {spot["reviews"]} reviews'
+                f'</div>'
+                f'<div style="font-size:12px; color:#999; margin-top:4px;">'
+                    f'Best nearby bodega'
+                f'</div>'
+            f'</div>'
+        )
+    else:
+        bodega_html = (
+            f'<div style="font-size:13px; color:#666;">'
+                f'No nearby bodegas found.'
+            f'</div>'
+        )
+
+    if subway_status == "On time":
+        status_bg = "#e8f5e9"
+        status_color = "#2e7d32"
+    elif subway_status == "Minor delays":
+        status_bg = "#fff8e1"
+        status_color = "#f57c00"
+    else:
+        status_bg = "#ffebee"
+        status_color = "#c62828"
 
     return (
         f'<div class="card">'
@@ -465,41 +419,284 @@ def build_live_destination_html(destination_name, weather, subway_status, coffee
             f'</div>'
 
             f'<div style="background:#fafafa; border:1px solid #ececec; border-radius:14px; padding:12px; margin-bottom:10px;">'
-                f'<div style="font-weight:800;">🌤 Weather</div>'
-                f'<div style="font-size:13px; color:#666; margin-top:4px;">Current conditions: {weather}</div>'
+                f'<div style="font-weight:800; margin-bottom:6px;">🥯 Nearby Bagels</div>'
+                f'{bagel_html}'
             f'</div>'
 
             f'<div style="background:#fafafa; border:1px solid #ececec; border-radius:14px; padding:12px; margin-bottom:10px;">'
-                f'<div style="font-weight:800;">🏙 Local Activity</div>'
-                f'<div style="font-size:13px; color:#666; margin-top:4px;">Activity near {destination_name} coming next.</div>'
+                f'<div style="font-weight:800; margin-bottom:6px;">🛒 Nearby Bodega</div>'
+                f'{bodega_html}'
             f'</div>'
+
+        f'<div style="background:#fafafa; border:1px solid #ececec; border-radius:14px; padding:12px; margin-bottom:10px;">'
+            f'<div style="font-weight:800;">{weather["icon"]} Weather</div>'
+
+            f'<div style="font-size:15px; font-weight:700; margin-top:6px;">'
+                f'{weather["condition"]}'
+            f'</div>'
+
+            f'<div style="font-size:13px; color:#666; margin-top:4px;">'
+                f'{weather["detail"]}'
+            f'</div>'
+
+            f'<div style="font-size:12px; color:#999; margin-top:6px;">'
+                f'Feels like {weather["feels_like"]}° at arrival ({weather["arrival_time"]})'
+            f'</div>'
+        f'</div>'
 
             f'<div style="background:#fafafa; border:1px solid #ececec; border-radius:14px; padding:12px;">'
                 f'<div style="font-weight:800;">🚇 Transit</div>'
-                f'<div style="font-size:13px; color:#666; margin-top:4px;">Subway status: {subway_status}</div>'
+                f'<div style="margin-top:8px;">'
+                    f'<span style="background:{status_bg}; color:{status_color}; '
+                    f'padding:5px 10px; border-radius:999px; '
+                    f'font-size:12px; font-weight:900;">'
+                        f'{subway_status}'
+                    f'</span>'
+                f'</div>'
+                f'<div style="font-size:12px; color:#999; margin-top:4px;">{subway_detail}</div>'
+                f'<div style="font-size:12px; color:#999; margin-top:4px;">Delay added: {subway_delay_minutes} min</div>'
             f'</div>'
-
         f'</div>'
     )
 
-# -----------------------
-# HEADER
-# -----------------------
-st.markdown("""
+    
+
+def render_taxi_map(route_points, origin, destination, origin_input, destination_input):
+    st.markdown(
+        f'<div class="card" style="padding-bottom:10px;">'
+            f'<div style="font-weight:900; font-size:18px; margin-bottom:10px;">'
+                f'🚕 Taxi Route Preview'
+            f'</div>',
+        unsafe_allow_html=True
+    )
+
+    route_df = pd.DataFrame(route_points, columns=["lat", "lon"])
+
+    path_data = [{
+        "path": route_df[["lon", "lat"]].values.tolist(),
+        "name": "Taxi route"
+    }]
+
+    min_lat = route_df["lat"].min()
+    max_lat = route_df["lat"].max()
+    min_lon = route_df["lon"].min()
+    max_lon = route_df["lon"].max()
+
+    center_lat = (min_lat + max_lat) / 2
+    center_lon = (min_lon + max_lon) / 2
+    max_span = max(max_lat - min_lat, max_lon - min_lon)
+
+    if max_span < 0.035:
+        zoom = 12.2
+    elif max_span < 0.06:
+        zoom = 11.5
+    elif max_span < 0.10:
+        zoom = 10.8
+    elif max_span < 0.18:
+        zoom = 10.1
+    else:
+        zoom = 9.5
+
+    glow_layer = pdk.Layer(
+        "PathLayer",
+        data=path_data,
+        get_path="path",
+        get_width=30,
+        width_units="pixels",
+        get_color=[255, 199, 44, 130],
+        pickable=False,
+    )
+
+    route_layer = pdk.Layer(
+        "PathLayer",
+        data=path_data,
+        get_path="path",
+        get_width=18,
+        width_units="pixels",
+        get_color=[255, 170, 0, 255],
+        pickable=False,
+    )
+
+    point_layer = pdk.Layer(
+        "ScatterplotLayer",
+        data=[
+            {"lat": origin["latitude"], "lon": origin["longitude"], "label": origin_input},
+            {"lat": destination["latitude"], "lon": destination["longitude"], "label": destination_input},
+        ],
+        get_position="[lon, lat]",
+        get_radius=7,
+        radius_units="pixels",
+        get_fill_color=[17, 17, 17, 255],
+        get_line_color=[255, 199, 44, 255],
+        line_width_min_pixels=3,
+        stroked=True,
+        filled=True,
+        pickable=True,
+    )
+
+    try:
+        taxi_icon_url = image_to_data_url("assets/nyc_taxi.png")
+        taxi_marker_data = [{
+            "lat": route_df.iloc[len(route_df) // 2]["lat"],
+            "lon": route_df.iloc[len(route_df) // 2]["lon"],
+            "icon_data": {
+                "url": taxi_icon_url,
+                "width": 1024,
+                "height": 1024,
+                "anchorY": 512,
+            },
+        }]
+
+        taxi_layer = pdk.Layer(
+            "IconLayer",
+            data=taxi_marker_data,
+            get_icon="icon_data",
+            get_position="[lon, lat]",
+            get_size=4,
+            size_scale=12,
+            pickable=True,
+        )
+    except Exception:
+        taxi_layer = pdk.Layer(
+            "ScatterplotLayer",
+            data=[{
+                "lat": route_df.iloc[len(route_df) // 2]["lat"],
+                "lon": route_df.iloc[len(route_df) // 2]["lon"],
+            }],
+            get_position="[lon, lat]",
+            get_radius=12,
+            radius_units="pixels",
+            get_fill_color=[255, 199, 44, 255],
+            pickable=False,
+        )
+
+    deck = pdk.Deck(
+        layers=[glow_layer, route_layer, point_layer, taxi_layer],
+        initial_view_state=pdk.ViewState(
+            latitude=center_lat,
+            longitude=center_lon,
+            zoom=zoom,
+            pitch=0,
+        ),
+        tooltip={"text": "{label}"},
+        map_style="light",
+    )
+
+    st.pydeck_chart(deck, use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+def render_subway_map(subway_data):
+    st.markdown(
+        f'<div class="card" style="padding-bottom:10px;">'
+            f'<div style="font-weight:900; font-size:18px; margin-bottom:10px;">'
+                f'🚇 Subway Route Preview'
+            f'</div>',
+        unsafe_allow_html=True
+    )
+
+    subway_layers = []
+    all_points = []
+
+    for leg in subway_data.get("transit_legs", []):
+        if leg.get("vehicle_type") != "SUBWAY":
+            continue
+
+        leg_polyline = leg.get("polyline", "")
+        if not leg_polyline:
+            continue
+
+        leg_points = decode_polyline(leg_polyline)
+        if not leg_points:
+            continue
+
+        all_points.extend(leg_points)
+
+        line_symbol = leg.get("line", "").split("/")[0].split(" ")[0]
+        hex_color = LINE_COLORS.get(line_symbol, "#0039A6")
+        rgb = hex_to_rgb(hex_color)
+
+        leg_df = pd.DataFrame(leg_points, columns=["lat", "lon"])
+
+        subway_layers.append(
+            pdk.Layer(
+                "PathLayer",
+                data=[{
+                    "path": leg_df[["lon", "lat"]].values.tolist(),
+                    "name": leg.get("line", "Subway")
+                }],
+                get_path="path",
+                get_width=10,
+                width_units="pixels",
+                get_color=[rgb[0], rgb[1], rgb[2], 255],
+                pickable=False,
+            )
+        )
+
+    if not all_points:
+        st.markdown("</div>", unsafe_allow_html=True)
+        return
+
+    subway_df = pd.DataFrame(all_points, columns=["lat", "lon"])
+
+    main_line = subway_data.get("line", "").split("/")[0].split(" ")[0]
+    main_color = LINE_COLORS.get(main_line, "#0039A6")
+    main_rgb = hex_to_rgb(main_color)
+
+    subway_icon_url = image_to_data_url("assets/subway_car.png")
+
+    subway_train_data = [{
+        "lat": subway_df.iloc[len(subway_df) // 2]["lat"],
+        "lon": subway_df.iloc[len(subway_df) // 2]["lon"],
+        "icon_data": {
+            "url": subway_icon_url,
+            "width": 1024,
+            "height": 1024,
+            "anchorY": 512,
+        },
+    }]
+
+    subway_train_layer = pdk.Layer(
+        "IconLayer",
+        data=subway_train_data,
+        get_icon="icon_data",
+        get_position="[lon, lat]",
+        get_size=4,
+        size_scale=14,
+        pickable=False,
+    )
+
+    subway_deck = pdk.Deck(
+        layers=[*subway_layers, subway_train_layer],
+        initial_view_state=pdk.ViewState(
+            latitude=subway_df["lat"].mean(),
+            longitude=subway_df["lon"].mean(),
+            zoom=11.8,
+            pitch=0,
+        ),
+        map_style="light",
+    )
+
+    st.pydeck_chart(subway_deck, use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+current_time = datetime.now().strftime("%I:%M %p")
+
+st.markdown(f"""
 <div class="app-header">
     <div>
         <div class="app-title">RouteIQ-NYC 🚕</div>
         <div class="app-subtitle">Know when to leave. Know how to get there.</div>
     </div>
-    <div class="update">Real-time updates • just now</div>
+    <div class="update">
+        Live NYC routing • Updated {current_time}
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
 
-# -----------------------
-# DESKTOP INPUT AREA
-# -----------------------
 left, main, right = st.columns([1.05, 2.1, 1.15], gap="large")
+
 
 with left:
     st.markdown("""
@@ -540,28 +737,18 @@ with left:
     )
 
     st.markdown(
-        """
-        <div class="card">
-            <div style="font-weight:900; margin-bottom:6px;">⚡ Real-time. Not guesses.</div>
-            <div class="small-muted">
-                RouteIQ compares subway status, traffic, and ETA so you know exactly when to go.
-            </div>
-        </div>
-
-        <div class="card">
-            <div style="font-weight:900; margin-bottom:6px;">🚇 Built for New Yorkers.</div>
-            <div class="small-muted">Made in NYC 💛</div>
-        </div>
-        """,
+        f'<div class="card">'
+            f'<div style="font-weight:900; margin-bottom:6px;">⚡ Real-time. Not guesses.</div>'
+            f'<div class="small-muted">RouteIQ compares subway status, traffic, and ETA so you know exactly when to go.</div>'
+        f'</div>'
+        f'<div class="card">'
+            f'<div style="font-weight:900; margin-bottom:6px;">🚇 Built for New Yorkers.</div>'
+            f'<div class="small-muted">Made in NYC 💛</div>'
+        f'</div>',
         unsafe_allow_html=True
     )
 
-   
 
-
-# -----------------------
-# RESULTS
-# -----------------------
 if run:
     with st.spinner("🚇 Checking subway delays... 🚕 Reading traffic... 🧠 Comparing routes..."):
         origin = geocode_address(origin_input)
@@ -579,6 +766,7 @@ if run:
 
         taxi_data = get_drive_eta(origin, destination)
         subway_data = get_transit_eta(origin, destination)
+
         if not isinstance(subway_data, dict):
             subway_data = {
                 "eta_seconds": 9999,
@@ -616,21 +804,34 @@ if run:
             "transfers": subway_data["transfers"],
             "delay_status": subway_data["delay_status"],
         }
+
         coffee_spots = get_nearby_coffee(destination)
-
-        live_html = build_live_destination_html(
-            destination_input,
-            "Clear",
-            subway.get("delay_status", "On time"),
-            coffee_spots
-        )
-
-        with left:
-            st.markdown(live_html, unsafe_allow_html=True)
+        bagel_spot = get_best_nearby_bagel(destination)
+        bodega_spot = get_best_nearby_bodega(destination)
 
         result = make_decision(subway, taxi, arrival_deadline, priority, "clear")
 
         recommendation = result["recommendation"]
+
+        selected_eta = subway["eta"] if recommendation == "subway" else taxi["eta"]
+
+        weather_data = get_weather_at_arrival(
+            destination["latitude"],
+            destination["longitude"],
+            selected_eta
+        )
+
+        live_html = build_live_destination_html(
+            destination_input,
+            weather_data,
+            subway_data.get("delay_status", "On time"),
+            subway_data.get("delay_detail", "No active delays reported"),
+            subway_data.get("delay_minutes", 0),
+            coffee_spots,
+            bagel_spot,
+            bodega_spot
+        )
+
         decision_text = "🚇 Take the Subway" if recommendation == "subway" else "🚕 Take the Taxi"
 
         why = generate_reasoning(recommendation, subway, taxi, priority, "clear")
@@ -650,10 +851,21 @@ if run:
 
         line_badges_html = get_line_badges_html(subway_data)
         train_boxes_html = build_train_boxes_html(subway_data)
+
+        subway_route_points = []
+
+        for leg in subway_data.get("transit_legs", []):
+            leg_polyline = leg.get("polyline", "")
+            if leg.get("vehicle_type") == "SUBWAY" and leg_polyline:
+                subway_route_points.extend(decode_polyline(leg_polyline))
+
         route_points = decode_polyline(polyline) if polyline else [
             (origin["latitude"], origin["longitude"]),
             (destination["latitude"], destination["longitude"]),
         ]
+
+    with left:
+        st.markdown(live_html, unsafe_allow_html=True)
 
     with main:
         hero_html = build_hero_card(decision_text, subway, taxi, result)
@@ -661,160 +873,49 @@ if run:
 
         summary_chips_html = (
             f'<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:14px;">'
-
                 f'<div style="background:#ffffff; border:1px solid #ececec; border-radius:16px; padding:14px; text-align:center;">'
                     f'<div style="font-size:18px;">🚇</div>'
                     f'<div style="font-size:20px; font-weight:900;">{subway["eta"]} min</div>'
                     f'<div style="font-size:11px; color:#666; font-weight:700;">Subway</div>'
                 f'</div>'
-
                 f'<div style="background:#ffffff; border:1px solid #ececec; border-radius:16px; padding:14px; text-align:center;">'
                     f'<div style="font-size:18px;">🚕</div>'
                     f'<div style="font-size:20px; font-weight:900;">{taxi["eta"]} min</div>'
                     f'<div style="font-size:11px; color:#666; font-weight:700;">Taxi</div>'
                 f'</div>'
-
                 f'<div style="background:#ffffff; border:1px solid #ececec; border-radius:16px; padding:14px; text-align:center;">'
                     f'<div style="font-size:18px;">💰</div>'
                     f'<div style="font-size:20px; font-weight:900;">${abs(taxi["cost"] - subway["cost"])}</div>'
                     f'<div style="font-size:11px; color:#666; font-weight:700;">Difference</div>'
                 f'</div>'
-
             f'</div>'
         )
 
         st.markdown(summary_chips_html, unsafe_allow_html=True)
 
-        def image_to_data_url(path: str) -> str:
-            with open(path, "rb") as image_file:
-                encoded = base64.b64encode(image_file.read()).decode()
-            return f"data:image/png;base64,{encoded}"
+        if recommendation == "taxi":
+            render_taxi_map(route_points, origin, destination, origin_input, destination_input)
 
-        st.markdown(
-            """
-            <div class="card" style="padding-bottom:10px;">
-                <div style="font-weight:900; font-size:18px; margin-bottom:10px;">
-                    Taxi Route Preview
-                </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-        route_df = pd.DataFrame(route_points, columns=["lat", "lon"])
-
-        path_data = [{
-            "path": route_df[["lon", "lat"]].values.tolist(),
-            "name": "Taxi route"
-        }]
-
-        min_lat = route_df["lat"].min()
-        max_lat = route_df["lat"].max()
-        min_lon = route_df["lon"].min()
-        max_lon = route_df["lon"].max()
-
-        center_lat = (min_lat + max_lat) / 2
-        center_lon = (min_lon + max_lon) / 2
-
-        lat_span = max_lat - min_lat
-        lon_span = max_lon - min_lon
-        max_span = max(lat_span, lon_span)
-
-        if max_span < 0.035:
-            zoom = 12.2
-        elif max_span < 0.06:
-            zoom = 11.5
-        elif max_span < 0.10:
-            zoom = 10.8
-        elif max_span < 0.18:
-            zoom = 10.1
+        if recommendation == "subway" and subway_route_points:
+            render_subway_map(subway_data)
+        if subway["delay_status"] == "On time":
+            chip_bg = "#e8f5e9"
+            chip_color = "#2e7d32"
+        elif subway["delay_status"] == "Minor delays":
+            chip_bg = "#fff8e1"
+            chip_color = "#f57c00"
         else:
-            zoom = 9.5
-
-        glow_layer = pdk.Layer(
-            "PathLayer",
-            data=path_data,
-            get_path="path",
-            get_width=30,
-            width_units="pixels",
-            get_color=[255, 199, 44, 130],
-            pickable=False,
-        )
-
-        route_layer = pdk.Layer(
-            "PathLayer",
-            data=path_data,
-            get_path="path",
-            get_width=18,
-            width_units="pixels",
-            get_color=[255, 170, 0, 255],
-            pickable=False,
-        )
-
-        point_layer = pdk.Layer(
-            "ScatterplotLayer",
-            data=[
-                {"lat": origin["latitude"], "lon": origin["longitude"], "label": origin_input},
-                {"lat": destination["latitude"], "lon": destination["longitude"], "label": destination_input},
-            ],
-            get_position="[lon, lat]",
-            get_radius=7,
-            radius_units="pixels",
-            get_fill_color=[17, 17, 17, 255],
-            get_line_color=[255, 199, 44, 255],
-            line_width_min_pixels=3,
-            stroked=True,
-            filled=True,
-            pickable=True,
-        )
-        taxi_icon_url = image_to_data_url("assets/nyc_taxi.png")
-
-        taxi_marker_data = [{
-            "lat": route_df.iloc[len(route_df) // 2]["lat"],
-            "lon": route_df.iloc[len(route_df) // 2]["lon"],
-            "icon_data": {
-                "url": taxi_icon_url,
-                "width": 1024,
-                "height": 1024,
-                "anchorY": 512,
-            },
-        }]
-
-        taxi_layer = pdk.Layer(
-            "IconLayer",
-            data=taxi_marker_data,
-            get_icon="icon_data",
-            get_position="[lon, lat]",
-            get_size=4,
-            size_scale=12,
-            pickable=True,
-        )
-
-        deck = pdk.Deck(
-            layers=[glow_layer, route_layer, point_layer, taxi_layer],
-            initial_view_state=pdk.ViewState(
-                latitude=center_lat,
-                longitude=center_lon,
-                zoom=zoom,
-                pitch=0,
-            ),
-            tooltip={"text": "{label}"},
-            map_style="light",
-        )
-
-        st.pydeck_chart(deck, use_container_width=True)
-
-        st.markdown("</div>", unsafe_allow_html=True)
+            chip_bg = "#ffebee"
+            chip_color = "#c62828"
 
         subway_html = (
             f'<div class="card">'
                 f'<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:10px;">'
                     f'<div style="font-weight:900; display:flex; align-items:center; flex-wrap:wrap;">🚇 Subway{line_badges_html}</div>'
-                    f'<div style="background:#e8f5e9; color:#2e7d32; padding:5px 10px; border-radius:999px; '
+                    f'<div style="background:{chip_bg}; color:{chip_color}; padding:5px 10px; border-radius:999px; '
                     f'font-size:12px; font-weight:900; white-space:nowrap;">{subway["delay_status"]}</div>'
                 f'</div>'
-
                 f'{train_boxes_html}'
-
                 f'<div style="margin-top:14px;">'
                     f'<div class="metric"><span>ETA</span><b>{subway["eta"]} min</b></div>'
                     f'<div class="metric"><span>Cost</span><b>${subway["cost"]}</b></div>'
@@ -822,7 +923,6 @@ if run:
                     f'<div class="metric"><span>Ride</span><b>{subway["ride_time"]} min</b></div>'
                     f'<div class="metric"><span>Transfers</span><b>{subway["transfers"]}</b></div>'
                 f'</div>'
-
                 f'<div style="margin-top:14px; border-top:1px solid #eee; padding-top:12px;">'
                     f'<div style="font-weight:900; font-size:14px; margin-bottom:8px;">Your route</div>'
                     f'{route_steps_html}'
@@ -841,7 +941,6 @@ if run:
                 f'<div class="metric"><span>Pickup</span><b>{taxi["pickup_time"]} min</b></div>'
                 f'<div class="metric"><span>Drive</span><b>{taxi["drive_time"]} min</b></div>'
                 f'<div class="metric"><span>Traffic</span><b>{taxi["traffic_level"]}</b></div>'
-            
             f'</div>'
         )
 
@@ -862,9 +961,8 @@ if run:
                 f'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">'
                     f'<div style="font-weight:900;">🛡 Reliability</div>'
                     f'<div style="background:#e8f5e9; color:#2e7d32; padding:7px 12px; '
-                    f'border-radius:14px; font-size:19px; font-weight:900;">{get_confidence_score(result["confidence"])}%</div>'
+                    f'border-radius:14px; font-size:19px; font-weight:900;">{confidence_value}%</div>'
                 f'</div>'
-
                 f'<div style="margin-top:6px; line-height:1.6;"><b>Late risk:</b> {risk_level}</div>'
                 f'<div style="margin-top:6px; line-height:1.6;"><b>Buffer:</b> {result["buffer"]} min</div>'
                 f'<div style="margin-top:6px; line-height:1.6;"><b>Worst case:</b> {worst_case} min</div>'
@@ -885,52 +983,39 @@ if run:
 else:
     with main:
         st.markdown(
-            """
-            <div class="card">
-                <div style="font-weight:900; margin-bottom:6px;">Start with a route</div>
-                <div class="small-muted">
-                    RouteIQ will compare subway and taxi options using live routing data, service conditions, and AI reasoning.
-                </div>
-            </div>
-            """,
+            f'<div class="card">'
+                f'<div style="font-weight:900; margin-bottom:6px;">Start with a route</div>'
+                f'<div class="small-muted">RouteIQ will compare subway and taxi options using live routing data, service conditions, and AI reasoning.</div>'
+            f'</div>',
             unsafe_allow_html=True
         )
 
     with right:
         st.markdown(
-            """
-            <div class="card">
-                <div style="font-weight:900; margin-bottom:6px;">Decision Intelligence</div>
-                <div class="small-muted">
-                    The next version of RouteIQ is becoming a desktop urban decision workspace — not just a transit app.
-                </div>
-            </div>
-            """,
+            f'<div class="card">'
+                f'<div style="font-weight:900; margin-bottom:6px;">Decision Intelligence</div>'
+                f'<div class="small-muted">The next version of RouteIQ is becoming a desktop urban decision workspace — not just a transit app.</div>'
+            f'</div>',
             unsafe_allow_html=True
         )
 
 
-# -----------------------
-# FOOTER
-# -----------------------
 st.markdown(
-    """
-    <div class="card">
-        <div class="footer-grid">
-            <div class="footer-item">
-                <div style="font-weight:900;">🚇 Live subway status</div>
-                <div class="small-muted">via MTA</div>
-            </div>
-            <div class="footer-item">
-                <div style="font-weight:900;">🚕 Traffic updates</div>
-                <div class="small-muted">via Google</div>
-            </div>
-            <div class="footer-item">
-                <div style="font-weight:900;">⚙️ Route planning</div>
-                <div class="small-muted">via Google Maps</div>
-            </div>
-        </div>
-    </div>
-    """,
+    f'<div class="card">'
+        f'<div class="footer-grid">'
+            f'<div class="footer-item">'
+                f'<div style="font-weight:900;">🚇 Live subway status</div>'
+                f'<div class="small-muted">via MTA</div>'
+            f'</div>'
+            f'<div class="footer-item">'
+                f'<div style="font-weight:900;">🚕 Traffic updates</div>'
+                f'<div class="small-muted">via Google</div>'
+            f'</div>'
+            f'<div class="footer-item">'
+                f'<div style="font-weight:900;">⚙️ Route planning</div>'
+                f'<div class="small-muted">via Google Maps</div>'
+            f'</div>'
+        f'</div>'
+    f'</div>',
     unsafe_allow_html=True
 )
