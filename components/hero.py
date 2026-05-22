@@ -7,6 +7,14 @@ def build_hero_card(decision_text: str, subway: dict, taxi: dict, result: dict) 
 
     delay_status = subway.get("delay_status", "On time")
 
+    is_subway = "Subway" in decision_text
+
+    hero_bg = "#111827" if is_subway else "#FFC72C"
+    hero_text = "#FFFFFF" if is_subway else "#111111"
+    hero_muted = "#FACC15" if is_subway else "#4d3a00"
+    chip_bg = "rgba(255,255,255,0.14)" if is_subway else "rgba(255,255,255,0.55)"
+    leave_bg = "rgba(255,255,255,0.10)" if is_subway else "rgba(17,17,17,0.9)"
+
     leave_time = (
         datetime.now() + timedelta(minutes=max(result["leave_in"], 0))
     ).strftime("%I:%M %p").lstrip("0")
@@ -21,7 +29,7 @@ def build_hero_card(decision_text: str, subway: dict, taxi: dict, result: dict) 
         delay_bg = "#ffebee"
         delay_color = "#c62828"
     return (
-        f'<div class="hero">'
+        f'<div class="hero" style="background:{hero_bg}; color:{hero_text};">'
 
             f'<div class="hero-top">'
                 f'ROUTEIQ RECOMMENDS'
@@ -31,7 +39,7 @@ def build_hero_card(decision_text: str, subway: dict, taxi: dict, result: dict) 
                 f'{decision_text}'
             f'</div>'
 
-            f'<div class="hero-chip">'
+            f'<div class="hero-chip" style="background:{chip_bg}; color:{hero_muted};">'
                 f'Saves {abs(subway["eta"] - taxi["eta"])} minutes • More predictable'
             f'</div>'
 
@@ -57,7 +65,7 @@ def build_hero_card(decision_text: str, subway: dict, taxi: dict, result: dict) 
 
             f'</div>'
 
-            f'<div class="leave-box">'
+            f'<div class="leave-box" style="background:{leave_bg};">'
 
                 f'<div class="leave-label">'
                     f'Leave at'

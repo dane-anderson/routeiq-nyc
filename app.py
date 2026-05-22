@@ -160,10 +160,8 @@ html, body, [class*="css"] {
 .hero-top {
     font-size: 12px;
     font-weight: 900;
-    color: #4d3a00;
-    letter-spacing: 0.06em;
+    color: #FACC15;
 }
-
 .hero-main {
     font-size: 34px;
     font-weight: 900;
@@ -1014,53 +1012,65 @@ if run:
 
         st.markdown(subway_html, unsafe_allow_html=True)
 
-    with right:
-        taxi_html = (
-            f'<div class="card">'
-                f'<div style="font-weight:900; margin-bottom:10px;">🚕 Taxi</div>'
-                f'<div class="metric"><span>ETA</span><b>{taxi["eta"]} min</b></div>'
-                f'<div class="metric"><span>Cost</span><b>${taxi["cost"]}</b></div>'
-                f'<div class="metric"><span>Pickup</span><b>{taxi["pickup_time"]} min</b></div>'
-                f'<div class="metric"><span>Drive</span><b>{taxi["drive_time"]} min</b></div>'
-                f'<div class="metric"><span>Traffic</span><b>{taxi["traffic_level"]}</b></div>'
-            f'</div>'
-        )
+        with right:
+            if recommendation == "subway":
+                primary_side_html = (
+                    f'<div class="card">'
+                        f'<div style="font-weight:900; margin-bottom:10px;">🚇 Subway</div>'
+                        f'<div class="metric"><span>ETA</span><b>{subway["eta"]} min</b></div>'
+                        f'<div class="metric"><span>Cost</span><b>${subway["cost"]}</b></div>'
+                        f'<div class="metric"><span>Walk</span><b>{subway["walk_to_station"]} min</b></div>'
+                        f'<div class="metric"><span>Ride</span><b>{subway["ride_time"]} min</b></div>'
+                        f'<div class="metric"><span>Status</span><b>{subway["delay_status"]}</b></div>'
+                    f'</div>'
+                )
+            else:
+                primary_side_html = (
+                    f'<div class="card">'
+                        f'<div style="font-weight:900; margin-bottom:10px;">🚕 Taxi</div>'
+                        f'<div class="metric"><span>ETA</span><b>{taxi["eta"]} min</b></div>'
+                        f'<div class="metric"><span>Cost</span><b>${taxi["cost"]}</b></div>'
+                        f'<div class="metric"><span>Pickup</span><b>{taxi["pickup_time"]} min</b></div>'
+                        f'<div class="metric"><span>Drive</span><b>{taxi["drive_time"]} min</b></div>'
+                        f'<div class="metric"><span>Traffic</span><b>{taxi["traffic_level"]}</b></div>'
+                    f'</div>'
+                )
 
-        st.markdown(taxi_html, unsafe_allow_html=True)
+            st.markdown(primary_side_html, unsafe_allow_html=True)
 
-        confidence_value = get_confidence_score(result["confidence"])
+            confidence_value = get_confidence_score(result["confidence"])
 
-        risk_level = (
-            "Low" if confidence_value >= 75
-            else "Medium" if confidence_value >= 45
-            else "High"
-        )
+            risk_level = (
+                "Low" if confidence_value >= 75
+                else "Medium" if confidence_value >= 45
+                else "High"
+            )
 
-        worst_case = taxi["eta"] + 8 if recommendation == "taxi" else subway["eta"] + 12
+            worst_case = taxi["eta"] + 8 if recommendation == "taxi" else subway["eta"] + 12
 
-        confidence_html = (
-            f'<div class="card">'
-                f'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">'
-                    f'<div style="font-weight:900;">🛡 Reliability</div>'
-                    f'<div style="background:#e8f5e9; color:#2e7d32; padding:7px 12px; '
-                    f'border-radius:14px; font-size:19px; font-weight:900;">{confidence_value}%</div>'
+            confidence_html = (
+                f'<div class="card">'
+                    f'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">'
+                        f'<div style="font-weight:900;">🛡 Reliability</div>'
+                        f'<div style="background:#e8f5e9; color:#2e7d32; padding:7px 12px; '
+                        f'border-radius:14px; font-size:19px; font-weight:900;">{confidence_value}%</div>'
+                    f'</div>'
+                    f'<div style="margin-top:6px; line-height:1.6;"><b>Late risk:</b> {risk_level}</div>'
+                    f'<div style="margin-top:6px; line-height:1.6;"><b>Buffer:</b> {result["buffer"]} min</div>'
+                    f'<div style="margin-top:6px; line-height:1.6;"><b>Worst case:</b> {worst_case} min</div>'
                 f'</div>'
-                f'<div style="margin-top:6px; line-height:1.6;"><b>Late risk:</b> {risk_level}</div>'
-                f'<div style="margin-top:6px; line-height:1.6;"><b>Buffer:</b> {result["buffer"]} min</div>'
-                f'<div style="margin-top:6px; line-height:1.6;"><b>Worst case:</b> {worst_case} min</div>'
-            f'</div>'
-        )
+            )
 
-        st.markdown(confidence_html, unsafe_allow_html=True)
+            st.markdown(confidence_html, unsafe_allow_html=True)
 
-        why_html = (
-            f'<div class="why-card">'
-                f'<div style="font-weight:900; margin-bottom:8px;">Why this recommendation?</div>'
-                f'<div style="margin-top:8px; line-height:1.65; color:#263447;">{why}</div>'
-            f'</div>'
-        )
+            why_html = (
+                f'<div class="why-card">'
+                    f'<div style="font-weight:900; margin-bottom:8px;">Why this recommendation?</div>'
+                    f'<div style="margin-top:8px; line-height:1.65; color:#263447;">{why}</div>'
+                f'</div>'
+            )
 
-        st.markdown(why_html, unsafe_allow_html=True)
+            st.markdown(why_html, unsafe_allow_html=True)
 
 else:
     with main:
