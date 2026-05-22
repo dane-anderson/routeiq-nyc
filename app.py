@@ -1,22 +1,20 @@
 import streamlit as st
-from datetime import datetime
+import requests
+
+from streamlit_searchbox import st_searchbox
+from datetime import datetime, timedelta, timezone
 
 from decision_engine import make_decision
 from ai_voice import generate_reasoning
 from routes_api import (
 
+    PLACES_API_KEY,
     get_drive_eta,
-
     get_transit_eta,
-
     geocode_address,
-
     get_nearby_coffee,
-
     get_best_nearby_bagel,
-
     get_best_nearby_bodega,
-
     get_weather_at_arrival
 
 )
@@ -27,6 +25,44 @@ import pandas as pd
 import pydeck as pdk
 import base64
 
+
+def search_nyc_places(searchterm: str):
+    if not searchterm:
+        return []
+
+    url = "https://places.googleapis.com/v1/places:autocomplete"
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": PLACES_API_KEY,
+    }
+
+    payload = {
+        "input": searchterm,
+        "includedRegionCodes": ["us"],
+        "locationRestriction": {
+            "circle": {
+                "center": {
+                    "latitude": 40.7128,
+                    "longitude": -74.0060,
+                },
+                "radius": 50000,
+            }
+        },
+    }
+
+    response = requests.post(url, headers=headers, json=payload, timeout=10)
+    data = response.json()
+
+    
+
+    suggestions = data.get("suggestions", [])
+
+    return [
+        item["placePrediction"]["text"]["text"]
+        for item in suggestions
+        if "placePrediction" in item
+    ][:5]
 
 LINE_COLORS = {
     "1": "#EE352E", "2": "#EE352E", "3": "#EE352E",
@@ -501,9 +537,9 @@ def render_taxi_map(route_points, origin, destination, origin_input, destination
         "PathLayer",
         data=path_data,
         get_path="path",
-        get_width=30,
+        get_width=10,
         width_units="pixels",
-        get_color=[255, 199, 44, 130],
+        get_color=[255, 199, 44, 70],
         pickable=False,
     )
 
@@ -511,7 +547,7 @@ def render_taxi_map(route_points, origin, destination, origin_input, destination
         "PathLayer",
         data=path_data,
         get_path="path",
-        get_width=18,
+        get_width=5,
         width_units="pixels",
         get_color=[255, 170, 0, 255],
         pickable=False,
@@ -666,12 +702,32 @@ def render_subway_map(subway_data):
         pickable=False,
     )
 
+    min_lat = subway_df["lat"].min()
+    max_lat = subway_df["lat"].max()
+    min_lon = subway_df["lon"].min()
+    max_lon = subway_df["lon"].max()
+
+    center_lat = (min_lat + max_lat) / 2
+    center_lon = (min_lon + max_lon) / 2
+    max_span = max(max_lat - min_lat, max_lon - min_lon)
+
+    if max_span < 0.035:
+        zoom = 12.2
+    elif max_span < 0.06:
+        zoom = 11.5
+    elif max_span < 0.10:
+        zoom = 10.8
+    elif max_span < 0.18:
+        zoom = 10.1
+    else:
+        zoom = 9.5
+
     subway_deck = pdk.Deck(
         layers=[*subway_layers, subway_train_layer],
         initial_view_state=pdk.ViewState(
             latitude=subway_df["lat"].mean(),
             longitude=subway_df["lon"].mean(),
-            zoom=11.8,
+            zoom=zoom,
             pitch=0,
         ),
         map_style="light",
@@ -708,23 +764,31 @@ with left:
     </div>
     """, unsafe_allow_html=True)
 
-    origin_input = st.text_input(
-        "Origin",
+    origin_input = st_searchbox(
+
+        search_nyc_places,
         placeholder="Where are you?",
-        label_visibility="collapsed"
+        label="Origin",
+        key="origin_searchbox",
     )
 
-    destination_input = st.text_input(
-        "Destination",
+    destination_input = st_searchbox(
+        search_nyc_places,
         placeholder="Where to?",
-        label_visibility="collapsed"
+        label="Destination",
+        key="destination_searchbox",
     )
 
-    arrival_deadline = st.number_input(
-        "Must arrive within",
-        min_value=1,
-        value=45
+    arrival_mode = st.radio(
+        "Arrival mode",
+        ["Leave now", "Arrive by"],
+        horizontal=True
     )
+
+    if arrival_mode == "Arrive by":
+        arrival_time = st.time_input("Arrive by time")
+    else:
+        arrival_time = None
 
     priority = st.selectbox(
         "Priority",
@@ -733,7 +797,7 @@ with left:
 
     run = st.button(
         "Compare Routes",
-        disabled=not (origin_input.strip() and destination_input.strip())
+        disabled=not (origin_input and destination_input)
     )
 
     st.markdown(
@@ -750,6 +814,25 @@ with left:
 
 
 if run:
+
+    now = datetime.now()
+
+    if arrival_mode == "Leave now":
+        arrival_deadline = 45
+        departure_datetime_utc = datetime.now(timezone.utc)
+
+    else:
+        target = datetime.combine(now.date(), arrival_time)
+
+        if target <= now:
+            target = target + timedelta(days=1)
+
+        arrival_deadline = round((target - now).total_seconds() / 60)
+
+        selected_eta_guess = 20
+        departure_datetime_local = target - timedelta(minutes=selected_eta_guess)
+        departure_datetime_utc = departure_datetime_local.astimezone(timezone.utc)
+
     with st.spinner("🚇 Checking subway delays... 🚕 Reading traffic... 🧠 Comparing routes..."):
         origin = geocode_address(origin_input)
         destination = geocode_address(destination_input)
@@ -765,21 +848,20 @@ if run:
             st.stop()
 
         taxi_data = get_drive_eta(origin, destination)
-        subway_data = get_transit_eta(origin, destination)
+
+        if not isinstance(taxi_data, dict):
+            st.error("Taxi route unavailable. Try a different NYC address or time.")
+            st.stop()
+
+        subway_data = get_transit_eta(
+            origin,
+            destination,
+            departure_time=departure_datetime_utc
+        )
 
         if not isinstance(subway_data, dict):
-            subway_data = {
-                "eta_seconds": 9999,
-                "walk_minutes": 0,
-                "ride_minutes": 0,
-                "transfers": 0,
-                "delay_status": "Unavailable",
-                "line": "",
-                "departure": "",
-                "arrival": "",
-                "transit_legs": [],
-                "route_steps": [],
-            }
+            st.error("Subway route unavailable. Try a different NYC address or time.")
+            st.stop()
 
         route_steps = subway_data.get("route_steps", [])
 

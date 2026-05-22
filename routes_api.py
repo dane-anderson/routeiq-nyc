@@ -24,6 +24,7 @@ HEADERS = {
         "routes.legs.steps.travelMode,"
         "routes.legs.steps.staticDuration,"
         "routes.legs.steps.transitDetails"
+        
     ),
 }
 
@@ -135,24 +136,50 @@ def get_mta_status_detail(line_symbol: str = "") -> dict:
         "delay_minutes": 0,
     }
 
+NYC_BOUNDS = {
+    "north": 40.9176,
+    "south": 40.4774,
+    "east": -73.7004,
+    "west": -74.2591,
+}
+
+
+def is_in_nyc(lat: float, lng: float) -> bool:
+    return (
+        NYC_BOUNDS["south"] <= lat <= NYC_BOUNDS["north"]
+        and NYC_BOUNDS["west"] <= lng <= NYC_BOUNDS["east"]
+    )
+
+
 def geocode_address(address: str) -> dict | None:
     url = "https://maps.googleapis.com/maps/api/geocode/json"
+
     params = {
-        "address": address,
+        "address": f"{address}, New York, NY",
         "key": API_KEY,
+        "bounds": "40.4774,-74.2591|40.9176,-73.7004",
+        "region": "us",
+        "components": "country:US|administrative_area:NY",
     }
 
     response = requests.get(url, params=params, timeout=10)
     result = response.json()
 
+   
+
     if result.get("status") != "OK" or not result.get("results"):
         return None
 
     location = result["results"][0]["geometry"]["location"]
+    lat = location["lat"]
+    lng = location["lng"]
+
+    if not is_in_nyc(lat, lng):
+        return None
 
     return {
-        "latitude": location["lat"],
-        "longitude": location["lng"],
+        "latitude": lat,
+        "longitude": lng,
     }
 
 
@@ -180,8 +207,10 @@ def get_drive_eta(origin: dict, destination: dict) -> int:
     response = requests.post(URL, headers=HEADERS, json=data, timeout=15)
     result = response.json()
 
+    print("DRIVE DEBUG:", result)
+
     if "routes" not in result or not result["routes"]:
-        return 9999
+        return None
 
     route = result["routes"][0]
 
@@ -225,7 +254,7 @@ def _route_score(route: dict) -> int:
     return score
 
 
-def get_transit_eta(origin: dict, destination: dict) -> dict | int:
+def get_transit_eta(origin: dict, destination: dict, departure_time=None) -> dict | int:
     data = {
         "origin": {
             "location": {
@@ -244,7 +273,7 @@ def get_transit_eta(origin: dict, destination: dict) -> dict | int:
             }
         },
         "travelMode": "TRANSIT",
-        "departureTime": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "departureTime": (departure_time or datetime.now(timezone.utc)).replace(microsecond=0).isoformat(),
         "computeAlternativeRoutes": True,
     }
 
@@ -252,10 +281,12 @@ def get_transit_eta(origin: dict, destination: dict) -> dict | int:
     result = response.json()
 
     if "routes" not in result or not result["routes"]:
-        return 9999
+        return None
 
     best_route = min(result["routes"], key=_route_score)
     seconds = int(best_route["duration"].replace("s", ""))
+
+    
 
     steps = best_route["legs"][0]["steps"]
     walk_seconds = 0
@@ -278,6 +309,9 @@ def get_transit_eta(origin: dict, destination: dict) -> dict | int:
             details = step.get("transitDetails", {})
             transit_line = details.get("transitLine", {})
             stop_details = details.get("stopDetails", {})
+
+            departure_time = stop_details.get("departureTime", "")
+            arrival_time = stop_details.get("arrivalTime", "")
 
             vehicle_type = transit_line.get("vehicle", {}).get("type", "")
             vehicle_name = transit_line.get("vehicle", {}).get("name", {}).get("text", "")
@@ -302,6 +336,8 @@ def get_transit_eta(origin: dict, destination: dict) -> dict | int:
                 "arrival": current_arrival,
                 "vehicle_type": vehicle_type,
                 "polyline": step_polyline,
+                "departure_time": departure_time,
+                "arrival_time": arrival_time,
             })
 
             if not departure:
@@ -318,14 +354,52 @@ def get_transit_eta(origin: dict, destination: dict) -> dict | int:
         route_steps = [
             {
                 "type": "walk",
-                "text": f"👣 Walk {round(walk_seconds / 60)} min to {first_departure}"
+                "text": f"👣 Walk {round((walk_seconds / 60) * 0.72)} min to {first_departure}"
             }
         ]
 
         for i, leg in enumerate(transit_legs):
+            board_time = ""
+
+            if leg.get("departure_time"):
+                try:
+                    departure_dt = datetime.fromisoformat(
+                        leg["departure_time"].replace("Z", "+00:00")
+                    ).astimezone()
+
+                    board_time = (
+                        departure_dt
+                        .strftime("%I:%M %p")
+                        .lstrip("0")
+                    )
+
+                    minutes_until = round(
+                        (departure_dt - datetime.now().astimezone()).total_seconds() / 60
+                    )
+
+                    if minutes_until > 0:
+                        countdown_text = f" • Boards in {minutes_until} min"
+                    else:
+                        countdown_text = ""
+
+                except:
+                    board_time = ""
+                    countdown_text = ""
+
+            else:
+                countdown_text = ""
+
+            train_text = (
+                f"🚇 Board {leg['line']} at {board_time}{countdown_text}\n"
+                f"{leg['departure']} → {leg['arrival']}"
+                if board_time
+                else
+                f"🚇 Take {leg['line']} from {leg['departure']} to {leg['arrival']}"
+            )
+
             route_steps.append({
                 "type": "train",
-                "text": f"🚇 Take {leg['line']} from {leg['departure']} to {leg['arrival']}"
+                "text": train_text
             })
 
             if i < len(transit_legs) - 1:
@@ -350,11 +424,14 @@ def get_transit_eta(origin: dict, destination: dict) -> dict | int:
     if ride_seconds == 0:
         ride_seconds = max(seconds - walk_seconds, 0)
 
+    adjusted_walk_seconds = int(walk_seconds * 0.72)
+    seconds = int((seconds - walk_seconds) + adjusted_walk_seconds) 
+
     mta_status = get_mta_status_detail(line)
 
     return {
         "eta_seconds": seconds,
-        "walk_minutes": round(walk_seconds / 60),
+        "walk_minutes": round((walk_seconds / 60) * 0.72),
         "ride_minutes": round(ride_seconds / 60),
         "transfers": max(transit_steps - 1, 0),
         "delay_status": mta_status["status"],

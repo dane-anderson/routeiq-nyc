@@ -1,6 +1,15 @@
+from datetime import datetime, timedelta
+
+
+
+
 def build_hero_card(decision_text: str, subway: dict, taxi: dict, result: dict) -> str:
 
     delay_status = subway.get("delay_status", "On time")
+
+    leave_time = (
+        datetime.now() + timedelta(minutes=max(result["leave_in"], 0))
+    ).strftime("%I:%M %p").lstrip("0")
 
     if delay_status == "On time":
         delay_bg = "#e8f5e9"
@@ -51,11 +60,11 @@ def build_hero_card(decision_text: str, subway: dict, taxi: dict, result: dict) 
             f'<div class="leave-box">'
 
                 f'<div class="leave-label">'
-                    f'Leave in'
+                    f'Leave at'
                 f'</div>'
 
                 f'<div class="leave-number">'
-                    f'{max(result["leave_in"], 0)} min'
+                    f'{leave_time}'
                 f'</div>'
 
                 f'<div style="font-size:13px; color:#e5e7eb; margin-top:4px;">'
