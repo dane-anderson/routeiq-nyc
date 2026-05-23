@@ -24,6 +24,8 @@ from components.hero import build_hero_card
 import pandas as pd
 import pydeck as pdk
 import base64
+from collections import defaultdict
+from datetime import date
 
 
 def search_nyc_places(searchterm: str):
@@ -76,12 +78,21 @@ LINE_COLORS = {
     "L": "#A7A9AC",
 }
 
+IP_REQUEST_LOG = defaultdict(list)
+
+MAX_REQUESTS_PER_IP_PER_DAY = 30
+
 
 st.set_page_config(
     page_title="RouteIQ-NYC",
     page_icon="🚕",
     layout="wide"
 )
+
+if "route_requests" not in st.session_state:
+    st.session_state.route_requests = 0
+
+MAX_ROUTE_REQUESTS = 25
 
 
 st.markdown("""
@@ -348,6 +359,17 @@ def decode_polyline(polyline_str: str) -> list[tuple[float, float]]:
         coordinates.append((lat / 1e5, lng / 1e5))
 
     return coordinates
+
+def is_rate_limited(ip_address: str) -> bool:
+    today = str(date.today())
+
+    IP_REQUEST_LOG[ip_address] = [
+        timestamp
+        for timestamp in IP_REQUEST_LOG[ip_address]
+        if timestamp == today
+    ]
+
+    return len(IP_REQUEST_LOG[ip_address]) >= MAX_REQUESTS_PER_IP_PER_DAY
 
 def build_live_destination_html(destination_name, weather, subway_status, subway_detail, subway_delay_minutes, coffee_spots, bagel_spot, bodega_spot):
     coffee_html = ""
@@ -812,6 +834,24 @@ with left:
 
 
 if run:
+    user_ip = st.query_params.get("ip", ["anonymous"])[0]
+
+    if is_rate_limited(user_ip):
+        st.error("Daily RouteIQ limit reached. Please try again tomorrow.")
+        st.stop()
+
+    IP_REQUEST_LOG[user_ip].append(str(date.today()))
+
+
+    if st.session_state.route_requests >= MAX_ROUTE_REQUESTS:
+        st.error("RouteIQ demo limit reached for this session. Please refresh later.")
+        st.stop()
+
+    if len(origin_input) > 120 or len(destination_input) > 120:
+        st.error("Please enter a shorter NYC address or place name.")
+        st.stop()
+
+    st.session_state.route_requests += 1
 
     now = datetime.now()
 
